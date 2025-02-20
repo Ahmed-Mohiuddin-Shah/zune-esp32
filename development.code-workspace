@@ -1,0 +1,14 @@
+{
+  "folders": [
+	{
+		"path": "windows"
+	},
+	{
+		"path": "embedded"
+	},
+	{
+		"path": "."
+	}
+],
+  "settings": {}
+}
