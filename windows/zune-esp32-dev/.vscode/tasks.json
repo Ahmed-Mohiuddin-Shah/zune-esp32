@@ -1,0 +1,97 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "create build folders",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "New-Item -ItemType Directory -Force -Path '${fileDirname}\\bin\\debug', '${fileDirname}\\bin\\release'"
+      ],
+      "problemMatcher": [],
+      "detail": "Creates the bin/debug and bin/release folders if they don't exist."
+    },
+    {
+      "label": "copy resources to debug",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "Copy-Item -Path '${fileDirname}\\resources\\*' -Destination '${fileDirname}\\bin\\debug\\resources' -Recurse -Force"
+      ],
+      "dependsOn": ["create build folders"],
+      "problemMatcher": [],
+      "detail": "Copies the resources folder to the debug build directory."
+    },
+    {
+      "label": "copy resources to release",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-Command",
+        "Copy-Item -Path '${fileDirname}\\resources\\*' -Destination '${fileDirname}\\bin\\release\\resources' -Recurse -Force"
+      ],
+      "dependsOn": ["create build folders"],
+      "problemMatcher": [],
+      "detail": "Copies the resources folder to the release build directory."
+    },
+    {
+      "label": "build debug",
+      "type": "shell",
+      "command": "C:/tools/w64devkit/bin/g++",
+      "args": [
+        "-g", // Debug flag
+        "-o",
+        "${fileDirname}\\bin\\debug\\${fileBasenameNoExtension}.exe",
+        "${file}",
+        "-lraylib",
+        "-lgdi32",
+        "-lwinmm"
+      ],
+      "dependsOn": ["create build folders", "copy resources to debug"], // Ensures folders and resources are ready
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$gcc"],
+      "detail": "Builds the program in debug mode."
+    },
+    {
+      "label": "build release",
+      "type": "shell",
+      "command": "C:/tools/w64devkit/bin/g++",
+      "args": [
+        "-O2", // Optimization flag for release
+        "-o",
+        "${fileDirname}\\bin\\release\\${fileBasenameNoExtension}.exe",
+        "${file}",
+        "-lraylib",
+        "-lgdi32",
+        "-lwinmm"
+      ],
+      "dependsOn": ["create build folders", "copy resources to release"], // Ensures folders and resources are ready
+      "group": "build",
+      "problemMatcher": ["$gcc"],
+      "detail": "Builds the program in release mode."
+    },
+    {
+      "label": "run debug",
+      "type": "shell",
+      "command": "${fileDirname}\\bin\\debug\\${fileBasenameNoExtension}.exe",
+      "dependsOn": ["build debug"], // Ensures the debug build is compiled first
+      "group": "test",
+      "problemMatcher": [],
+      "detail": "Runs the debug build of the program."
+    },
+    {
+      "label": "run release",
+      "type": "shell",
+      "command": "${fileDirname}\\bin\\release\\${fileBasenameNoExtension}.exe",
+      "dependsOn": ["build release"], // Ensures the debug build is compiled first
+      "group": "test",
+      "problemMatcher": [],
+      "detail": "Runs the release build of the program."
+    }
+  ]
+}
