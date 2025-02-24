@@ -39,7 +39,7 @@ This project aims to create a Zune HD-like device using an ESP32-S3 microcontrol
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/zune-esp32.git
+   git clone https://github.com/Ahmed-Mohiuddin-Shah/zune-esp32.git
    ```
 2. Open the project in PlatformIO.
 
