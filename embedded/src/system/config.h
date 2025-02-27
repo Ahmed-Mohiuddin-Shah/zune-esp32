@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Arduino.h>
 
 #include <SPI.h>
@@ -13,8 +15,14 @@
 #include "helpers.h"
 #include "Audio.h"
 
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
+
 // Include I2S driver
 #include <driver/i2s.h>
+
+Adafruit_MPU6050 mpu;
 
 int sck = 36;
 int miso = 37;
