@@ -1,0 +1,211 @@
+#include "system/helpers.h"
+
+void readTouch()
+{
+    p = ts.getPoint();
+    pinMode(YP, OUTPUT);
+    pinMode(XM, OUTPUT);
+    pinMode(YM, OUTPUT);
+    pinMode(XP, OUTPUT);
+}
+
+void Task1code(void *parameter)
+{
+    for (;;)
+    {
+        audio.loop();
+    }
+}
+
+void setup(void)
+{
+    encoder.attachHalfQuad(DT, CLK);
+    pinMode(ENCODER_BUTTON, INPUT_PULLUP);
+    pinMode(HOME_BUTTON, INPUT_PULLUP);
+    pinMode(POWER_BUTTON, INPUT_PULLUP);
+    pinMode(BATTERY_SENSE, INPUT);
+    adcAttachPin(BATTERY_SENSE);
+    encoder.setCount(0);
+
+    if (!mpu.begin(0x69))
+    {
+        Serial.println("Failed to find MPU6050 chip");
+        while (1)
+        {
+            delay(10);
+        }
+    }
+    Serial.println("MPU6050 Found!");
+
+    if (!rtc.begin())
+    {
+        Serial.println("Couldn't find RTC");
+        while (1)
+        {
+            delay(10);
+        }
+    }
+
+    // if (!rtc.isrunning())
+    // {
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    // }
+
+    mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+    mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+    mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+
+    AudioLogger::instance().begin(Serial, AudioLogger::Info);
+    delay(1000);
+
+    i2s_driver_install(I2S_PORT, &i2s_config, 0, NULL);
+    i2s_set_pin(I2S_PORT, &pin_config);
+    auto cfg = i2s_mic.defaultConfig(RX_MODE);
+    cfg.i2s_format = I2S_STD_FORMAT;
+    cfg.bits_per_sample = 16;
+    cfg.channels = 2;
+    cfg.sample_rate = 16000;
+    cfg.pin_ws = I2S_WS;
+    cfg.pin_bck = I2S_SCK;
+    cfg.pin_data = I2S_SD;
+    cfg.port_no = I2S_PORT;
+    i2s_mic.begin(cfg);
+
+    auto cfg_out = out.defaultConfig();
+    cfg_out.bits_per_sample = 16;
+    cfg_out.channels = 2;
+    cfg_out.sample_rate = 16000;
+    out.begin(cfg_out);
+
+    i2s_start(I2S_PORT);
+    copier.setCheckAvailableForWrite(false);
+
+    delay(500);
+
+    SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+    if (!SD.begin(SD_CS))
+    {
+        Serial.println("Card Mount Failed");
+    }
+
+    tft.init();
+    tft.setRotation(0);
+    tft.fillScreen(TFT_BLACK);
+
+    xTaskCreatePinnedToCore(
+        Task1code,
+        "Task1",
+        10000,
+        NULL,
+        0,
+        &Task1,
+        0);
+}
+
+
+int batSensStart = millis();
+int screenOnStart = millis();
+
+void loop()
+{
+
+    if (millis() - screenOnStart > 4000) {
+        digitalWrite(TFT_BL, LOW);
+    }
+    else
+    {
+        digitalWrite(TFT_BL, HIGH);
+    }
+
+    if (!digitalRead(ENCODER_BUTTON))
+    {
+        screenOnStart = millis();
+    }
+
+    static bool recording = false;
+    static File audioFile;
+    static File csvFile;
+    static unsigned long startTime = millis();
+
+    long newPosition = encoder.getCount() / 2;
+
+    tft.setCursor(20, 50, 2);
+    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+    tft.setTextSize(1);
+    tft.print(newPosition);
+    tft.print("   Button ");
+    tft.print(digitalRead(ENCODER_BUTTON));
+    tft.setCursor(20, 80, 2);
+    tft.print("   Home ");
+    tft.print(digitalRead(HOME_BUTTON));
+    tft.print("   Power ");
+    tft.print(digitalRead(POWER_BUTTON));
+
+    tft.setCursor(20, 140, 2);
+    tft.print("Time: ");
+    DateTime now = rtc.now();
+    String formattedTime = String(now.year()) + "-" + (now.month() < 10 ? "0" : "") + String(now.month()) + "-" + (now.day() < 10 ? "0" : "") + String(now.day()) + " " + (now.hour() < 10 ? "0" : "") + String(now.hour()) + ":" + (now.minute() < 10 ? "0" : "") + String(now.minute()) + ":" + (now.second() < 10 ? "0" : "") + String(now.second());
+    tft.print(formattedTime.c_str());
+
+    tft.setCursor(20, 180, 2);
+    tft.print("Battery: ");
+    int batteryValue = analogRead(BATTERY_SENSE);
+    tft.print(batteryValue);
+
+    if (!recording)
+    {
+        audioFile = SD.open("/record.wav", FILE_WRITE);
+        csvFile = SD.open("/data.csv", FILE_WRITE);
+        if (csvFile)
+        {
+            csvFile.println("Timestamp,Battery");
+        }
+        copier.begin(out, i2s_mic);
+        Serial.println("RECORDING");
+        recording = true;
+    }
+
+    if (millis() - startTime > 10000)
+    {
+        copier.end();
+        audioFile.close();
+        // csvFile.close();
+        // Serial.println("FILE CLOSED");
+    }
+    else
+    {
+        copier.copy();
+    }
+
+        if (millis() -  batSensStart > 4000) {
+            if (csvFile)
+            {
+                csvFile.printf("%s,%d\n", formattedTime.c_str(), batteryValue);
+                csvFile.flush();
+            }
+            batSensStart = millis();
+        }
+
+    readTouch();
+
+    int x = (int)((float)(p.x + 2555) / 9.48);
+    int y = (int)((float)(p.y + 2905) / 7.55);
+    y = abs(y - 480);
+
+    if (p.z != 0)
+    {
+        tft.drawPixel(x, y, TFT_RED);
+        tft.drawCircle(x, y, 3, TFT_PURPLE);
+    }
+
+    if (x < 20 && y < 20 && p.z != 0)
+    {
+        tft.fillScreen(TFT_BLACK);
+    }
+
+    tft.setCursor(20, 0, 2);
+    tft.setTextColor(TFT_BLACK, TFT_WHITE);
+    tft.setTextSize(1);
+    tft.print(millis() / 1000);
+    tft.print("s");
+}
