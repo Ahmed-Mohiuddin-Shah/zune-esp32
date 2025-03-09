@@ -1,4 +1,5 @@
-#include "Zyngine.h"
+#include "zyngine.h"
+#include "devicedrivers.h"
 
 bool Zyngine::initialize(int width, int height, int targetFPS)
 {
@@ -6,7 +7,7 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     // Example: Set up the renderer, input, etc.
     screenWidth = width;
     screenHeight = height;
-    renderer = new ZynRenderer(new TFT_eSPI(), screenWidth, screenHeight);
+    renderer = new ZynRenderer(screenWidth, screenHeight, new ParallelILI9486());
     start_time = millis();
     targetFrameTime = 1.0f / (float)targetFPS;
     onUserCreate();
@@ -15,7 +16,6 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
 
 void Zyngine::run()
 {
-    const float targetFrameTime = 1.0f / 60.0f; // Target frame time for 60 FPS
 
     while (true)
     {
@@ -24,5 +24,7 @@ void Zyngine::run()
         start_time = current_time;
 
         onUserUpdate(deltaTime);
+
+        renderer->diffDraw();
     }
 }
