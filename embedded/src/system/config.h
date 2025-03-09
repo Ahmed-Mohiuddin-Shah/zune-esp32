@@ -14,7 +14,6 @@
 #include "ESP32Encoder.h"
 #include <Wire.h>
 #include <SPI.h>
-#include <TFT_eSPI.h>
 #include <driver/i2s.h>
 #include <TouchScreen.h>
 #include <Adafruit_Sensor.h>
@@ -65,9 +64,8 @@ Adafruit_MPU6050 mpu;
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 240);
 TSPoint p;
 // clk, data
-PS2 mouse(45, 39);
+PS2 mouse(45, 38);
 
-TFT_eSPI tft = TFT_eSPI();
 
 TaskHandle_t Task1;
 
