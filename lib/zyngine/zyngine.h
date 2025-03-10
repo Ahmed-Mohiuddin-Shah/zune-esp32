@@ -4,7 +4,6 @@
 #include <zynrenderer.h>
 #include <zynmath.h>
 #include <SPI.h> 
-#include <TFT_eSPI.h>
 
 // Zyngine.h
 class Zyngine

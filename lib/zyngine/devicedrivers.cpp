@@ -6,7 +6,7 @@ ParallelILI9486::ParallelILI9486(void)
         auto cfg = _bus_instance.config(); // 获取用于总线设置的结构。
 
         // 8位并行总线设置
-        cfg.freq_write = 25000000; // 发送时钟（最大可将20MHz、80MHz舍入为整数）
+        cfg.freq_write = 30000000; // 发送时钟（最大可将20MHz、80MHz舍入为整数）
         cfg.pin_wr = 12;           // 连接WR的针脚编号
         cfg.pin_rd = 46;           // 连接RD的针脚编号
         cfg.pin_rs = 13;           // 连接RS（D/C）的针脚编号
