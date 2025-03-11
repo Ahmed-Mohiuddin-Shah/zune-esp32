@@ -20,12 +20,23 @@
 // Math.h
 struct Vector2
 {
-    float x, y;
+    float x;
+    float y;
+    // Constructor for easy initialization
+    Vector2(float x = 0, float y = 0)
+        : x(x), y(y) {}
 };
 
 struct Vector3
 {
-    float x, y, z;
+    float x = 0;
+    float y = 0;
+    float z = 0;
+    float w = 1;
+
+    // Constructor for easy initialization
+    Vector3(float x = 0, float y = 0, float z = 0, float w = 1)
+        : x(x), y(y), z(z), w(w) {}
 };
 
 struct Triangle
@@ -64,7 +75,7 @@ struct Mesh
             {
                 Vector3 vertex;
                 sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-                Serial.println(line);
+                // Serial.println(line);
                 vertices.push_back(vertex);
             }
             else if (line[0] == 'f')
@@ -72,15 +83,13 @@ struct Mesh
                 Triangle triangle;
                 int v1, v2, v3;
                 sscanf(line, "f %d %d %d", &v1, &v2, &v3);
-                Serial.println(line);
+                // Serial.println(line);
 
                 triangle.vertices[0] = vertices[v1 - 1];
                 triangle.vertices[1] = vertices[v2 - 1];
                 triangle.vertices[2] = vertices[v3 - 1];
                 tris.push_back(triangle);
             }
-
-
         }
         file.close();
         return true;
@@ -93,5 +102,6 @@ struct Matrix4
 };
 
 void multiplyMatrixVector(Vector3 &i, Vector3 &o, Matrix4 &m);
+uint16_t RGB888ToRGB565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp = 1.0f);
 
 #endif

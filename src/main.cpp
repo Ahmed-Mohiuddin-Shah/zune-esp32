@@ -4,8 +4,10 @@
 #include <strstream>
 
 #include <zyngine.h>
+#include <zutils.h>
 
 #include "Audio.h"
+#include "ESP32Encoder.h"
 
 #include <FS.h>
 #include <SD.h>
@@ -22,29 +24,11 @@
 #define SD_MOSI 35
 #define SD_CS 39
 
-uint16_t rgb888_to_rgb565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp = 1.0f)
-{
-    red8 = floor(red8 * dp);
-    green8 = floor(green8 * dp);
-    blue8 = floor(blue8 * dp);
+#define CLK 18 // CLK ENCODER
+#define DT 17  // DT ENCODER
+#define ENCODER_BUTTON 43
 
-    // Convert 8-bit red to 5-bit red.
-    uint16_t red5 = (red8 * 31) / 255;
-    // Convert 8-bit green to 6-bit green.
-    uint16_t green6 = (green8 * 63) / 255;
-    // Convert 8-bit blue to 5-bit blue.
-    uint16_t blue5 = (blue8 * 31) / 255;
-
-    // Shift the red value to the left by 11 bits.
-    uint16_t red5_shifted = red5 << 11;
-    // Shift the green value to the left by 5 bits.
-    uint16_t green6_shifted = green6 << 5;
-
-    // Combine the red, green, and blue values.
-    uint16_t rgb565 = red5_shifted | green6_shifted | blue5;
-
-    return rgb565;
-}
+ESP32Encoder encoder;
 
 class MyGame : public Zyngine
 {
@@ -52,42 +36,20 @@ private:
     Mesh cubeMesh;
     Matrix4 projectionMatrix;
 
-    Vector3 camera3D;
+    Vector3 cameraPosition;
+    Vector3 cameraLookDirection;
 
-    float fTheta;
-    char fps[7];
+    float yaw;
+    int toggle = 0;
+
+    float theta;
+    char fps[50];
+    int32_t count;
 
 public:
-    void onUserCreate() override
+    void
+    onUserCreate() override
     {
-
-        // cubeMesh.tris = {
-
-        // // SOUTH
-        // { 0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,    1.0f, 1.0f, 0.0f },
-        // { 0.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,    1.0f, 0.0f, 0.0f },
-
-        // // EAST
-        // { 1.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,    1.0f, 1.0f, 1.0f },
-        // { 1.0f, 0.0f, 0.0f,    1.0f, 1.0f, 1.0f,    1.0f, 0.0f, 1.0f },
-
-        // // NORTH
-        // { 1.0f, 0.0f, 1.0f,    1.0f, 1.0f, 1.0f,    0.0f, 1.0f, 1.0f },
-        // { 1.0f, 0.0f, 1.0f,    0.0f, 1.0f, 1.0f,    0.0f, 0.0f, 1.0f },
-
-        // // WEST
-        // { 0.0f, 0.0f, 1.0f,    0.0f, 1.0f, 1.0f,    0.0f, 1.0f, 0.0f },
-        // { 0.0f, 0.0f, 1.0f,    0.0f, 1.0f, 0.0f,    0.0f, 0.0f, 0.0f },
-
-        // // TOP
-        // { 0.0f, 1.0f, 0.0f,    0.0f, 1.0f, 1.0f,    1.0f, 1.0f, 1.0f },
-        // { 0.0f, 1.0f, 0.0f,    1.0f, 1.0f, 1.0f,    1.0f, 1.0f, 0.0f },
-
-        // // BOTTOM
-        // { 1.0f, 0.0f, 1.0f,    0.0f, 0.0f, 1.0f,    0.0f, 0.0f, 0.0f },
-        // { 1.0f, 0.0f, 1.0f,    0.0f, 0.0f, 0.0f,    1.0f, 0.0f, 0.0f },
-
-        // };
 
         // Load the cube mesh from an OBJ file
         if (!cubeMesh.loadFromObjectFile("/VideoShip.obj"))
@@ -96,134 +58,182 @@ public:
             return;
         }
 
-        float fNear = 0.1f;
-        float fFar = 1000.0f;
-        float fFov = 90.0f;
-        float fAspectRatio = (float)screenHeight / (float)screenWidth;
-        float fFovRad = 1.0f / tanf(fFov * 0.5f / 180.0f * PI);
+        projectionMatrix = createProjectionMatrix(screenWidth, screenHeight, 90.0f, 0.1f, 1000.0f);
 
-        projectionMatrix.m[0][0] = fAspectRatio * fFovRad;
-        projectionMatrix.m[1][1] = fFovRad;
-        projectionMatrix.m[2][2] = fFar / (fFar - fNear);
-        projectionMatrix.m[3][2] = (-fFar * fNear) / (fFar - fNear);
-        projectionMatrix.m[2][3] = 1.0f;
-        projectionMatrix.m[3][3] = 0.0f;
+        cameraPosition = {0.0f, 0.0f, 5.0f};
+
+        encoder.attachFullQuad(CLK, DT);
+        encoder.setCount(0);
+        pinMode(ENCODER_BUTTON, INPUT_PULLUP);
+    }
+
+    void getInput()
+    {
+        if (digitalRead(ENCODER_BUTTON) == LOW)
+        {
+            toggle = (toggle + 1) % 3;
+        }
+        count = encoder.getCount();
+
+        if (count > 0)
+        {
+            if (toggle == 0)
+            {
+                cameraPosition.x += count;
+            }
+            else if (toggle == 1)
+            {
+                cameraPosition.y += count;
+            }
+            else
+            {
+                cameraPosition.z += count;
+            }
+        }
+        else
+        {
+            if (toggle == 0)
+            {
+                cameraPosition.x -= count;
+            }
+            else if (toggle == 1)
+            {
+                cameraPosition.y -= count;
+            }
+            else
+            {
+                cameraPosition.z -= count;
+            }
+        }
+        // encoder.setCount(0);
     }
 
     void onUserUpdate(float deltaTime) override
     {
 
-        renderer->clear();
-        sprintf(fps, "%.2f", (1.0f / deltaTime));
-        renderer->printText(20, 20, fps, TFT_BLACK, TFT_WHITE);
+        if (digitalRead(ENCODER_BUTTON) == LOW)
+        {
+            toggle = (toggle + 1) % 3;
+        }
+        count = encoder.getCount();
+
+        if (count != 0)
+        {
+            if (toggle == 0)
+            {
+                cameraPosition.x += count * deltaTime;
+            }
+            else if (toggle == 1)
+            {
+                cameraPosition.y += count * deltaTime;
+            }
+            else
+            {
+                cameraPosition.z += count * deltaTime;
+            }
+        }
+        encoder.setCount(0);
+
+        // // Set up rotation matrices
+        // theta += 0.5f * deltaTime;
 
         Matrix4 rotationMatrixZ, rotationMatrixX;
-        // Set up rotation matrices
-        fTheta += 0.5f * deltaTime;
-
         // Rotation Z
-        rotationMatrixZ.m[0][0] = cosf(fTheta);
-        rotationMatrixZ.m[0][1] = sinf(fTheta);
-        rotationMatrixZ.m[1][0] = -sinf(fTheta);
-        rotationMatrixZ.m[1][1] = cosf(fTheta);
-        rotationMatrixZ.m[2][2] = 1;
-        rotationMatrixZ.m[3][3] = 1;
+        rotationMatrixZ = matrixMakeRotationZ(theta * 0.5f);
+        rotationMatrixX = matrixMakeRotationX(theta);
 
-        // Rotation X
-        rotationMatrixX.m[0][0] = 1;
-        rotationMatrixX.m[1][1] = cosf(fTheta * 0.5f);
-        rotationMatrixX.m[1][2] = sinf(fTheta * 0.5f);
-        rotationMatrixX.m[2][1] = -sinf(fTheta * 0.5f);
-        rotationMatrixX.m[2][2] = cosf(fTheta * 0.5f);
-        rotationMatrixX.m[3][3] = 1;
+        Matrix4 translationMatrix = matrixMakeTranslation(0.0f, 0.0f, 0.5f);
+
+        Matrix4 worldMatrix = matrixMakeIdentity();
+        worldMatrix = matrixMultiplyMatrix(rotationMatrixZ, rotationMatrixX);
+        worldMatrix = matrixMultiplyMatrix(worldMatrix, translationMatrix);
+
+        Vector3 cameraUp = {0.0f, 1.0f, 0.0f};
+        Vector3 cameraTarget = {0.0f, 0.0f, 1.0f};
+        Matrix4 cameraRotationMatrix = matrixMakeRotationY(yaw);
+        cameraLookDirection = matrixMultiplyVector(cameraRotationMatrix, cameraTarget);
+        cameraTarget = Vector_Add(cameraPosition, cameraLookDirection);
+        Matrix4 cameraMatrix = matrixPointAt(cameraPosition, cameraTarget, cameraUp);
+
+        Matrix4 viewMatrix = matrixQuickInverse(cameraMatrix);
 
         std::vector<Triangle> trianglesToRender;
 
         for (auto tri : cubeMesh.tris)
         {
-            Triangle projectedTriangle, translatedTriangle, rotatedTriangleZ, rotatedTriangleZX;
+            Triangle projectedTriangle, transformedTriangle, viewedTriangle;
 
-            multiplyMatrixVector(tri.vertices[0], rotatedTriangleZ.vertices[0], rotationMatrixZ);
-            multiplyMatrixVector(tri.vertices[1], rotatedTriangleZ.vertices[1], rotationMatrixZ);
-            multiplyMatrixVector(tri.vertices[2], rotatedTriangleZ.vertices[2], rotationMatrixZ);
-
-            multiplyMatrixVector(rotatedTriangleZ.vertices[0], rotatedTriangleZX.vertices[0], rotationMatrixX);
-            multiplyMatrixVector(rotatedTriangleZ.vertices[1], rotatedTriangleZX.vertices[1], rotationMatrixX);
-            multiplyMatrixVector(rotatedTriangleZ.vertices[2], rotatedTriangleZX.vertices[2], rotationMatrixX);
-
-            translatedTriangle = rotatedTriangleZX;
-            translatedTriangle.vertices[0].z = tri.vertices[0].z + 10.0f;
-            translatedTriangle.vertices[1].z = tri.vertices[1].z + 10.0f;
-            translatedTriangle.vertices[2].z = tri.vertices[2].z + 10.0f;
+            transformedTriangle.vertices[0] = matrixMultiplyVector(worldMatrix, tri.vertices[0]);
+            transformedTriangle.vertices[1] = matrixMultiplyVector(worldMatrix, tri.vertices[1]);
+            transformedTriangle.vertices[2] = matrixMultiplyVector(worldMatrix, tri.vertices[2]);
 
             Vector3 normal, line1, line2;
-            line1.x = translatedTriangle.vertices[1].x - translatedTriangle.vertices[0].x;
-            line1.y = translatedTriangle.vertices[1].y - translatedTriangle.vertices[0].y;
-            line1.z = translatedTriangle.vertices[1].z - translatedTriangle.vertices[0].z;
+            line1 = Vector_Sub(transformedTriangle.vertices[1], transformedTriangle.vertices[0]);
+            line2 = Vector_Sub(transformedTriangle.vertices[2], transformedTriangle.vertices[0]);
 
-            line2.x = translatedTriangle.vertices[2].x - translatedTriangle.vertices[0].x;
-            line2.y = translatedTriangle.vertices[2].y - translatedTriangle.vertices[0].y;
-            line2.z = translatedTriangle.vertices[2].z - translatedTriangle.vertices[0].z;
-
-            normal.x = line1.y * line2.z - line1.z * line2.y;
-            normal.y = line1.z * line2.x - line1.x * line2.z;
-            normal.z = line1.x * line2.y - line1.y * line2.x;
+            normal = Vector_CrossProduct(line1, line2);
 
             // It's normally normal to normalise the normal
-            float l = sqrtf(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-            normal.x /= l;
-            normal.y /= l;
-            normal.z /= l;
+            normal = Vector_Normalise(normal);
 
-            if (
-                normal.x * (translatedTriangle.vertices[0].x - camera3D.x) +
-                    normal.y * (translatedTriangle.vertices[0].y - camera3D.y) +
-                    normal.z * (translatedTriangle.vertices[0].z - camera3D.z) <
-                0)
+            Vector3 cameraRay = Vector_Sub(transformedTriangle.vertices[0], cameraPosition);
+
+            if (Vector_DotProduct(normal, cameraRay) < 0.0f)
             {
 
-                Vector3 lightDirection = {0.0f, 0.0f, -1.0f};
+                Vector3 lightDirection = {0.0f, 1.0f, -1.0f};
 
-                float l = sqrtf(lightDirection.x * lightDirection.x + lightDirection.y * lightDirection.y + lightDirection.z * lightDirection.z);
-                lightDirection.x /= l;
-                lightDirection.y /= l;
-                lightDirection.z /= l;
+                lightDirection = Vector_Normalise(lightDirection);
 
                 // How similar is normal to light direction
-                float dp = normal.x * lightDirection.x + normal.y * lightDirection.y + normal.z * lightDirection.z;
+                float dp = max(0.1f, Vector_DotProduct(normal, lightDirection));
 
-                uint16_t finalColor = rgb888_to_rgb565(255, 165, 0, dp);
+                uint16_t finalColor = RGB888ToRGB565(255, 255, 255, dp);
 
-                multiplyMatrixVector(translatedTriangle.vertices[0], projectedTriangle.vertices[0], projectionMatrix);
-                multiplyMatrixVector(translatedTriangle.vertices[1], projectedTriangle.vertices[1], projectionMatrix);
-                multiplyMatrixVector(translatedTriangle.vertices[2], projectedTriangle.vertices[2], projectionMatrix);
-                // Scaling into view
-                projectedTriangle.vertices[0].x += 1.0f;
-                projectedTriangle.vertices[0].y += 1.0f;
+                viewedTriangle.vertices[0] = matrixMultiplyVector(viewMatrix, transformedTriangle.vertices[0]);
+                viewedTriangle.vertices[1] = matrixMultiplyVector(viewMatrix, transformedTriangle.vertices[1]);
+                viewedTriangle.vertices[2] = matrixMultiplyVector(viewMatrix, transformedTriangle.vertices[2]);
+                viewedTriangle.color;
 
-                projectedTriangle.vertices[1].x += 1.0f;
-                projectedTriangle.vertices[1].y += 1.0f;
+                int noClippedTriangles = 0;
+                Triangle clipped[2];
+                noClippedTriangles = triangleClipAgainstPlane({0.0f, 0.0f, 0.1f}, {0.0f, 0.0f, 1.0f}, viewedTriangle, clipped[0], clipped[1]);
 
-                projectedTriangle.vertices[2].x += 1.0f;
-                projectedTriangle.vertices[2].y += 1.0f;
+                for (int n = 0; n < noClippedTriangles; n++)
+                {
 
-                projectedTriangle.vertices[0].x *= 0.5f * (float)screenWidth;
-                projectedTriangle.vertices[0].y *= 0.5f * (float)screenHeight;
+                    projectedTriangle.vertices[0] = matrixMultiplyVector(projectionMatrix, clipped[n].vertices[0]);
+                    projectedTriangle.vertices[1] = matrixMultiplyVector(projectionMatrix, clipped[n].vertices[1]);
+                    projectedTriangle.vertices[2] = matrixMultiplyVector(projectionMatrix, clipped[n].vertices[2]);
+                    projectedTriangle.color = finalColor;
 
-                projectedTriangle.vertices[1].x *= 0.5f * (float)screenWidth;
-                projectedTriangle.vertices[1].y *= 0.5f * (float)screenHeight;
+                    projectedTriangle.vertices[0] = Vector_Div(projectedTriangle.vertices[0], projectedTriangle.vertices[0].w);
+                    projectedTriangle.vertices[1] = Vector_Div(projectedTriangle.vertices[1], projectedTriangle.vertices[1].w);
+                    projectedTriangle.vertices[2] = Vector_Div(projectedTriangle.vertices[2], projectedTriangle.vertices[2].w);
 
-                projectedTriangle.vertices[2].x *= 0.5f * (float)screenWidth;
-                projectedTriangle.vertices[2].y *= 0.5f * (float)screenHeight;
+                    projectedTriangle.vertices[0].x *= -1.0f;
+                    projectedTriangle.vertices[1].x *= -1.0f;
+                    projectedTriangle.vertices[2].x *= -1.0f;
 
-                // renderer->fillTriangle(projectedTriangle.vertices[0].x, projectedTriangle.vertices[0].y, projectedTriangle.vertices[1].x, projectedTriangle.vertices[1].y, projectedTriangle.vertices[2].x, projectedTriangle.vertices[2].y, finalColor);
-                // renderer->drawTriangle(projectedTriangle.vertices[0].x, projectedTriangle.vertices[0].y, projectedTriangle.vertices[1].x, projectedTriangle.vertices[1].y, projectedTriangle.vertices[2].x, projectedTriangle.vertices[2].y, TFT_BLACK);
+                    projectedTriangle.vertices[0].y *= -1.0f;
+                    projectedTriangle.vertices[1].y *= -1.0f;
+                    projectedTriangle.vertices[2].y *= -1.0f;
 
-                projectedTriangle.color = finalColor;
-                trianglesToRender.push_back(projectedTriangle);
+                    Vector3 offsetView = {1, 1, 0};
+                    projectedTriangle.vertices[0] = Vector_Add(projectedTriangle.vertices[0], offsetView);
+                    projectedTriangle.vertices[1] = Vector_Add(projectedTriangle.vertices[1], offsetView);
+                    projectedTriangle.vertices[2] = Vector_Add(projectedTriangle.vertices[2], offsetView);
+
+                    projectedTriangle.vertices[0].x *= 0.5f * (float)screenWidth;
+                    projectedTriangle.vertices[0].y *= 0.5f * (float)screenHeight;
+                    projectedTriangle.vertices[1].x *= 0.5f * (float)screenWidth;
+                    projectedTriangle.vertices[1].y *= 0.5f * (float)screenHeight;
+                    projectedTriangle.vertices[2].x *= 0.5f * (float)screenWidth;
+                    projectedTriangle.vertices[2].y *= 0.5f * (float)screenHeight;
+                    trianglesToRender.push_back(projectedTriangle);
+                }
             }
         }
-
         // Sort triangles from back to front
         sort(trianglesToRender.begin(), trianglesToRender.end(), [](Triangle &t1, Triangle &t2)
              {
@@ -231,10 +241,16 @@ public:
 			float z2 = (t2.vertices[0].z + t2.vertices[1].z + t2.vertices[2].z) / 3.0f;
 			return z1 > z2; });
 
-        for (auto &projectedTriangle : trianglesToRender)
+        // Clear the screen and draw the triangles
+        renderer->clear();
+        sprintf(fps, "%.2f Axis: %d , %f, %f, %f", (1.0f / deltaTime), toggle, cameraPosition.x, cameraPosition.y, cameraPosition.z);
+        renderer->printText(20, 20, fps, TFT_BLACK, TFT_WHITE);
+
+
+        for (auto &triangle : trianglesToRender)
         {
-            renderer->fillTriangle(projectedTriangle.vertices[0].x, projectedTriangle.vertices[0].y, projectedTriangle.vertices[1].x, projectedTriangle.vertices[1].y, projectedTriangle.vertices[2].x, projectedTriangle.vertices[2].y, projectedTriangle.color);
-            // renderer->drawTriangle(projectedTriangle.vertices[0].x, projectedTriangle.vertices[0].y, projectedTriangle.vertices[1].x, projectedTriangle.vertices[1].y, projectedTriangle.vertices[2].x, projectedTriangle.vertices[2].y, TFT_BLACK);
+            renderer->fillTriangle(triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[2].x, triangle.vertices[2].y, triangle.color);
+            // renderer->drawTriangle(triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[2].x, triangle.vertices[2].y, TFT_BLACK);
         }
     }
 };

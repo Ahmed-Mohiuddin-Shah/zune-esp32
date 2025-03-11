@@ -50,6 +50,16 @@ void ZynRenderer::drawLine(int x1, int y1, int x2, int y2, uint16_t color)
     currentFrame->drawLine(x1, y2, x2, y2, color);
 }
 
+void ZynRenderer::drawRect(int x, int y, int width, int height, uint16_t color)
+{
+    currentFrame->drawRect(x, y, width, height, color);
+}
+
+void ZynRenderer::fillRect(int x, int y, int width, int height, uint16_t color)
+{
+    currentFrame->fillRect(x, y, width, height, color);
+}
+
 void ZynRenderer::drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color)
 {
     currentFrame->drawTriangle(x1, y1, x2, y2, x3, y3, color);
