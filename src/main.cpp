@@ -12,6 +12,7 @@
 #include <FS.h>
 #include <SD.h>
 #include <SPI.h>
+#include <list>
 
 // I2S Connections for Speaker
 #define I2S_DOUT 40
@@ -52,13 +53,13 @@ public:
     {
 
         // Load the cube mesh from an OBJ file
-        if (!cubeMesh.loadFromObjectFile("/VideoShip.obj"))
+        if (!cubeMesh.loadFromObjectFile("/mountains.obj"))
         {
             Serial.println("Failed to load cube mesh");
             return;
         }
 
-        projectionMatrix = createProjectionMatrix(screenWidth, screenHeight, 90.0f, 0.1f, 1000.0f);
+        projectionMatrix = createProjectionMatrix(screenWidth, screenHeight, 90.0f, 0.1f, 100.0f);
 
         cameraPosition = {0.0f, 0.0f, 5.0f};
 
@@ -246,11 +247,71 @@ public:
         sprintf(fps, "%.2f Axis: %d , %f, %f, %f", (1.0f / deltaTime), toggle, cameraPosition.x, cameraPosition.y, cameraPosition.z);
         renderer->printText(20, 20, fps, TFT_BLACK, TFT_WHITE);
 
-
         for (auto &triangle : trianglesToRender)
         {
             renderer->fillTriangle(triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[2].x, triangle.vertices[2].y, triangle.color);
             // renderer->drawTriangle(triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[2].x, triangle.vertices[2].y, TFT_BLACK);
+        }
+
+        // Loop through all transformed, viewed, projected, and sorted triangles
+        for (auto &triToRaster : trianglesToRender)
+        {
+            // Clip triangles against all four screen edges, this could yield
+            // a bunch of triangles, so create a queue that we traverse to
+            //  ensure we only test new triangles generated against planes
+            Triangle clipped[2];
+            std::list<Triangle> listTriangles;
+
+            // Add initial triangle
+            listTriangles.push_back(triToRaster);
+            int nNewTriangles = 1;
+
+            for (int p = 0; p < 4; p++)
+            {
+                int nTrisToAdd = 0;
+                while (nNewTriangles > 0)
+                {
+                    // Take triangle from front of queue
+                    Triangle test = listTriangles.front();
+                    listTriangles.pop_front();
+                    nNewTriangles--;
+
+                    // Clip it against a plane. We only need to test each
+                    // subsequent plane, against subsequent new triangles
+                    // as all triangles after a plane clip are guaranteed
+                    // to lie on the inside of the plane. I like how this
+                    // comment is almost completely and utterly justified
+                    switch (p)
+                    {
+                    case 0:
+                        nTrisToAdd = triangleClipAgainstPlane({0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, test, clipped[0], clipped[1]);
+                        break;
+                    case 1:
+                        nTrisToAdd = triangleClipAgainstPlane({0.0f, (float)screenHeight - 1, 0.0f}, {0.0f, -1.0f, 0.0f}, test, clipped[0], clipped[1]);
+                        break;
+                    case 2:
+                        nTrisToAdd = triangleClipAgainstPlane({0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, test, clipped[0], clipped[1]);
+                        break;
+                    case 3:
+                        nTrisToAdd = triangleClipAgainstPlane({(float)screenWidth - 1, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f}, test, clipped[0], clipped[1]);
+                        break;
+                    }
+
+                    // Clipping may yield a variable number of triangles, so
+                    // add these new ones to the back of the queue for subsequent
+                    // clipping against next planes
+                    for (int w = 0; w < nTrisToAdd; w++)
+                        listTriangles.push_back(clipped[w]);
+                }
+                nNewTriangles = listTriangles.size();
+            }
+
+            // Draw the transformed, viewed, clipped, projected, sorted, clipped triangles
+            for (auto &t : listTriangles)
+            {
+                renderer->fillTriangle(t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y, t.color);
+                // DrawTriangle(t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y, PIXEL_SOLID, FG_BLACK);
+            }
         }
     }
 };
