@@ -3,7 +3,9 @@
 
 #include <zynrenderer.h>
 #include <zynmath.h>
-#include <SPI.h> 
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+#include <raylib/raylib.h>
+#endif
 
 // Zyngine.h
 class Zyngine
@@ -12,6 +14,7 @@ protected:
     int screenHeight;
     int screenWidth;
     unsigned long start_time;
+    // TODO Move Target FPS Logic to ZynRenderer
     float targetFrameTime;
     ZynRenderer *renderer;
 

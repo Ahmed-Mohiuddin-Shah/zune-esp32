@@ -1,5 +1,6 @@
 #include "zynmath.h"
 
+
 void multiplyMatrixVector(Vector3 &i, Vector3 &o, Matrix4 &m)
 {
     o.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + m.m[3][0];

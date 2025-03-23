@@ -288,10 +288,7 @@
     "C:/Users/mohiu/.platformio/packages/framework-arduinoespressif32/libraries/WiFiProv/src",
     ""
   ],
-  "C_Cpp_Runner.includeSearch": [
-    "*",
-    "**/*"
-  ],
+  "C_Cpp_Runner.includeSearch": ["*", "**/*"],
   "C_Cpp_Runner.excludeSearch": [
     "**/build",
     "**/build/**",
@@ -305,5 +302,47 @@
   "C_Cpp_Runner.useLeakSanitizer": false,
   "C_Cpp_Runner.showCompilationTime": false,
   "C_Cpp_Runner.useLinkTimeOptimization": false,
-  "C_Cpp_Runner.msvcSecureNoWarnings": false
+  "C_Cpp_Runner.msvcSecureNoWarnings": false,
+  "files.associations": {
+    "*.sqlbook": "sql",
+    "*.ndjson": "jsonl",
+    "*.dbclient-js": "javascript",
+    "*.embeddedhtml": "html",
+    "strstream": "cpp",
+    "*.tcc": "cpp",
+    "fstream": "cpp",
+    "random": "cpp",
+    "limits": "cpp",
+    "cmath": "cpp",
+    "algorithm": "cpp",
+    "format": "cpp"
+  },
+  "cSpell.words": [
+    "adafruit",
+    "BCLK",
+    "Clib",
+    "DBOARD",
+    "DESP",
+    "devkit",
+    "devkitc",
+    "esphome",
+    "espressif",
+    "lgdi",
+    "lgfx",
+    "Lovyan",
+    "lraylib",
+    "lwinmm",
+    "madhephaestus",
+    "MOSI",
+    "Normalise",
+    "normalised",
+    "Psram",
+    "qspi",
+    "RAYLIB",
+    "zune",
+    "ZUTILS",
+    "ZYNGINE",
+    "ZYNMATH",
+    "ZYNRENDERER"
+  ]
 }

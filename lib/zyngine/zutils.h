@@ -1,16 +1,22 @@
 #ifndef ZUTILS_H
 #define ZUTILS_H
 
+#include <config_user.h>
+
+#ifdef ZYNGINE_ESP32S3
 #include <Arduino.h>
+#endif
+
 #include <string>
 #include <fstream>
 #include <strstream>
 
 #include <zynmath.h>
 
+
 uint16_t rgb888_to_rgb565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp = 1.0f);
 Matrix4 createProjectionMatrix(int screenWidth, int screenHeight, float fov = 90.0f, float nearPlane = 0.1f, float farPlane = 100.0f);
-Vector3 matrixMultiplyVector(Matrix4 &m, Vector3 &i);
+Vector4 matrixMultiplyVector(Matrix4 &m, Vector4 &i);
 Matrix4 matrixMakeIdentity();
 Matrix4 matrixMakeRotationX(float fAngleRad);
 Matrix4 matrixMakeRotationY(float fAngleRad);
@@ -18,18 +24,18 @@ Matrix4 matrixMakeRotationZ(float fAngleRad);
 Matrix4 matrixMakeTranslation(float x, float y, float z);
 Matrix4 matrixMakeProjection(float fFovDegrees, float fAspectRatio, float fNear, float fFar);
 Matrix4 matrixMultiplyMatrix(Matrix4 &m1, Matrix4 &m2);
-Matrix4 matrixPointAt(Vector3 &pos, Vector3 &target, Vector3 &up);
+Matrix4 matrixPointAt(Vector4 &pos, Vector4 &target, Vector4 &up);
 Matrix4 matrixQuickInverse(Matrix4 &m);
-Vector3 Vector_Add(Vector3 &v1, Vector3 &v2);
-Vector3 Vector_Sub(Vector3 &v1, Vector3 &v2);
-Vector3 Vector_Mul(Vector3 &v1, float k);
-Vector3 Vector_Div(Vector3 &v1, float k);
-float Vector_DotProduct(Vector3 &v1, Vector3 &v2);
-float Vector_Length(Vector3 &v);
-Vector3 Vector_Normalise(Vector3 &v);
-Vector3 Vector_CrossProduct(Vector3 &v1, Vector3 &v2);
-Vector3 Vector_IntersectPlane(Vector3 &plane_p, Vector3 &plane_n, Vector3 &lineStart, Vector3 &lineEnd);
-int triangleClipAgainstPlane(Vector3 plane_p, Vector3 plane_n, Triangle &in_tri, Triangle &out_tri1, Triangle &out_tri2);
+Vector4 Vector_Add(Vector4 &v1, Vector4 &v2);
+Vector4 Vector_Sub(Vector4 &v1, Vector4 &v2);
+Vector4 Vector_Mul(Vector4 &v1, float k);
+Vector4 Vector_Div(Vector4 &v1, float k);
+float Vector_DotProduct(Vector4 &v1, Vector4 &v2);
+float Vector_Length(Vector4 &v);
+Vector4 Vector_Normalise(Vector4 &v);
+Vector4 Vector_CrossProduct(Vector4 &v1, Vector4 &v2);
+Vector4 Vector_IntersectPlane(Vector4 &plane_p, Vector4 &plane_n, Vector4 &lineStart, Vector4 &lineEnd);
+int triangleClipAgainstPlane(Vector4 plane_p, Vector4 plane_n, Triangle &in_tri, Triangle &out_tri1, Triangle &out_tri2);
 
 // Utils.h
 class Zutils
@@ -61,6 +67,7 @@ uint16_t rgb888_to_rgb565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp)
     uint16_t rgb565 = red5_shifted | green6_shifted | blue5;
 
     return rgb565;
+
 }
 
 Matrix4 createProjectionMatrix(int screenWidth, int screenHeight, float fov, float nearPlane, float farPlane)
@@ -79,9 +86,11 @@ Matrix4 createProjectionMatrix(int screenWidth, int screenHeight, float fov, flo
     return projectionMatrix;
 }
 
-Vector3 matrixMultiplyVector(Matrix4 &m, Vector3 &i)
+Vector4 matrixMultiplyVector(Matrix4 &m, Vector4 &i)
 {
-    Vector3 v;
+    Vector4 v;
+    v.w = 1.0f;
+    i.w = 1.0f;
     v.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + i.w * m.m[3][0];
     v.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + i.w * m.m[3][1];
     v.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + i.w * m.m[3][2];
@@ -170,19 +179,19 @@ Matrix4 matrixMultiplyMatrix(Matrix4 &m1, Matrix4 &m2)
     return matrix;
 }
 
-Matrix4 matrixPointAt(Vector3 &pos, Vector3 &target, Vector3 &up)
+Matrix4 matrixPointAt(Vector4 &pos, Vector4 &target, Vector4 &up)
 {
     // Calculate new forward direction
-    Vector3 newForward = Vector_Sub(target, pos);
+    Vector4 newForward = Vector_Sub(target, pos);
     newForward = Vector_Normalise(newForward);
 
     // Calculate new Up direction
-    Vector3 a = Vector_Mul(newForward, Vector_DotProduct(up, newForward));
-    Vector3 newUp = Vector_Sub(up, a);
+    Vector4 a = Vector_Mul(newForward, Vector_DotProduct(up, newForward));
+    Vector4 newUp = Vector_Sub(up, a);
     newUp = Vector_Normalise(newUp);
 
     // New Right direction is easy, its just cross product
-    Vector3 newRight = Vector_CrossProduct(newUp, newForward);
+    Vector4 newRight = Vector_CrossProduct(newUp, newForward);
 
     // Construct Dimensioning and Translation Matrix
     Matrix4 matrix;
@@ -227,80 +236,80 @@ Matrix4 matrixQuickInverse(Matrix4 &m) // Only for Rotation/Translation Matrices
     return matrix;
 }
 
-Vector3 Vector_Add(Vector3 &v1, Vector3 &v2)
+Vector4 Vector_Add(Vector4 &v1, Vector4 &v2)
 {
     return {v1.x + v2.x, v1.y + v2.y, v1.z + v2.z, 1.0f};
 }
 
-Vector3 Vector_Sub(Vector3 &v1, Vector3 &v2)
+Vector4 Vector_Sub(Vector4 &v1, Vector4 &v2)
 {
     return {v1.x - v2.x, v1.y - v2.y, v1.z - v2.z, 1.0f};
 }
 
-Vector3 Vector_Mul(Vector3 &v1, float k)
+Vector4 Vector_Mul(Vector4 &v1, float k)
 {
     return {v1.x * k, v1.y * k, v1.z * k, 1.0f};
 }
 
-Vector3 Vector_Div(Vector3 &v1, float k)
+Vector4 Vector_Div(Vector4 &v1, float k)
 {
     return {v1.x / k, v1.y / k, v1.z / k, 1.0f};
 }
 
-float Vector_DotProduct(Vector3 &v1, Vector3 &v2)
+float Vector_DotProduct(Vector4 &v1, Vector4 &v2)
 {
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
-float Vector_Length(Vector3 &v)
+float Vector_Length(Vector4 &v)
 {
     return sqrtf(Vector_DotProduct(v, v));
 }
 
-Vector3 Vector_Normalise(Vector3 &v)
+Vector4 Vector_Normalise(Vector4 &v)
 {
     float l = Vector_Length(v);
     return {v.x / l, v.y / l, v.z / l, 1.0f};
 }
 
-Vector3 Vector_CrossProduct(Vector3 &v1, Vector3 &v2)
+Vector4 Vector_CrossProduct(Vector4 &v1, Vector4 &v2)
 {
-    Vector3 v;
+    Vector4 v;
     v.x = v1.y * v2.z - v1.z * v2.y;
     v.y = v1.z * v2.x - v1.x * v2.z;
     v.z = v1.x * v2.y - v1.y * v2.x;
     return v;
 }
 
-Vector3 Vector_IntersectPlane(Vector3 &plane_p, Vector3 &plane_n, Vector3 &lineStart, Vector3 &lineEnd)
+Vector4 Vector_IntersectPlane(Vector4 &plane_p, Vector4 &plane_n, Vector4 &lineStart, Vector4 &lineEnd)
 {
     plane_n = Vector_Normalise(plane_n);
     float plane_d = -Vector_DotProduct(plane_n, plane_p);
     float ad = Vector_DotProduct(lineStart, plane_n);
     float bd = Vector_DotProduct(lineEnd, plane_n);
     float t = (-plane_d - ad) / (bd - ad);
-    Vector3 lineStartToEnd = Vector_Sub(lineEnd, lineStart);
-    Vector3 lineToIntersect = Vector_Mul(lineStartToEnd, t);
+    Vector4 lineStartToEnd = Vector_Sub(lineEnd, lineStart);
+    Vector4 lineToIntersect = Vector_Mul(lineStartToEnd, t);
     return Vector_Add(lineStart, lineToIntersect);
 }
 
-int triangleClipAgainstPlane(Vector3 plane_p, Vector3 plane_n, Triangle &in_tri, Triangle &out_tri1, Triangle &out_tri2)
+int triangleClipAgainstPlane(Vector4 plane_p, Vector4 plane_n, Triangle &in_tri, Triangle &out_tri1, Triangle &out_tri2)
 {
     // Make sure plane normal is indeed normal
     plane_n = Vector_Normalise(plane_n);
 
     // Return signed shortest distance from point to plane, plane normal must be normalised
-    auto dist = [&](Vector3 &p)
+    auto dist = [&](Vector4 &p)
     {
-        Vector3 n = Vector_Normalise(p);
+        Vector4 n = Vector_Normalise(p);
         return (plane_n.x * p.x + plane_n.y * p.y + plane_n.z * p.z - Vector_DotProduct(plane_n, plane_p));
     };
 
     // Create two temporary storage arrays to classify points either side of plane
     // If distance sign is positive, point lies on "inside" of plane
-    Vector3 *inside_points[3];
+    Vector4 *inside_points[3];
     int nInsidePointCount = 0;
-    Vector3 *outside_points[3];
+    Vector4 *outside_points[3];
     int nOutsidePointCount = 0;
 
     // Get signed distance of each point in triangle to plane
@@ -400,6 +409,8 @@ int triangleClipAgainstPlane(Vector3 plane_p, Vector3 plane_n, Triangle &in_tri,
 
         return 2; // Return two newly formed triangles which form a quad
     }
+    // If the function reaches here, it means no valid triangles were formed
+    return 0;
 }
 
 #endif

@@ -1,5 +1,6 @@
 #include <devicedrivers.h>
 
+#ifdef ZYNGINE_ESP32S3
 ParallelILI9486::ParallelILI9486(void)
 {
     {                                      // 设置总线控制。
@@ -52,3 +53,5 @@ ParallelILI9486::ParallelILI9486(void)
     pinMode(2, OUTPUT);
     digitalWrite(2, HIGH);
 }
+
+#endif

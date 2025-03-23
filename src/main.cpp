@@ -1,19 +1,16 @@
-#include <Arduino.h>
-
-#include <fstream>
-#include <strstream>
-
 #include <zyngine.h>
 #include <zutils.h>
 
+#ifdef ZYNGINE_ESP32S3
+#include <Arduino.h>
 #include "Audio.h"
 #include "ESP32Encoder.h"
 
 #include <FS.h>
 #include <SD.h>
 #include <SPI.h>
-#include <list>
-
+ESP32Encoder encoder;
+Audio audio;
 // I2S Connections for Speaker
 #define I2S_DOUT 40
 #define I2S_BCLK 41
@@ -28,17 +25,26 @@
 #define CLK 18 // CLK ENCODER
 #define DT 17  // DT ENCODER
 #define ENCODER_BUTTON 43
+#endif
+#ifndef ZYNGINE_ESP32S3
+#include <math.h>
+#include <stdio.h>
+#endif
 
-ESP32Encoder encoder;
+#include <fstream>
+#include <strstream>
+
+#include <list>
+#include <algorithm>
 
 class MyGame : public Zyngine
 {
 private:
-    Mesh cubeMesh;
+    ZyngineMesh cubeMesh;
     Matrix4 projectionMatrix;
 
-    Vector3 cameraPosition;
-    Vector3 cameraLookDirection;
+    Vector4 cameraPosition;
+    Vector4 cameraLookDirection;
 
     float yaw;
     int toggle = 0;
@@ -46,6 +52,7 @@ private:
     float theta;
     char fps[50];
     int32_t count;
+    bool skipFrame = true;
 
 public:
     void
@@ -53,65 +60,29 @@ public:
     {
 
         // Load the cube mesh from an OBJ file
-        if (!cubeMesh.loadFromObjectFile("/mountains.obj"))
+        if (!cubeMesh.loadFromObjectFile("./resources/3d-models/mountains.obj"))
         {
+#ifdef ZYNGINE_ESP32S3
             Serial.println("Failed to load cube mesh");
             return;
+#endif
         }
 
         projectionMatrix = createProjectionMatrix(screenWidth, screenHeight, 90.0f, 0.1f, 100.0f);
 
         cameraPosition = {0.0f, 0.0f, 5.0f};
 
+#ifdef ZYNGINE_ESP32S3
         encoder.attachFullQuad(CLK, DT);
         encoder.setCount(0);
         pinMode(ENCODER_BUTTON, INPUT_PULLUP);
-    }
-
-    void getInput()
-    {
-        if (digitalRead(ENCODER_BUTTON) == LOW)
-        {
-            toggle = (toggle + 1) % 3;
-        }
-        count = encoder.getCount();
-
-        if (count > 0)
-        {
-            if (toggle == 0)
-            {
-                cameraPosition.x += count;
-            }
-            else if (toggle == 1)
-            {
-                cameraPosition.y += count;
-            }
-            else
-            {
-                cameraPosition.z += count;
-            }
-        }
-        else
-        {
-            if (toggle == 0)
-            {
-                cameraPosition.x -= count;
-            }
-            else if (toggle == 1)
-            {
-                cameraPosition.y -= count;
-            }
-            else
-            {
-                cameraPosition.z -= count;
-            }
-        }
-        // encoder.setCount(0);
+#endif
     }
 
     void onUserUpdate(float deltaTime) override
     {
 
+#ifdef ZYNGINE_ESP32S3
         if (digitalRead(ENCODER_BUTTON) == LOW)
         {
             toggle = (toggle + 1) % 3;
@@ -134,6 +105,27 @@ public:
             }
         }
         encoder.setCount(0);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+
+        if (!skipFrame)
+        {
+            if (IsKeyDown(KEY_A))
+                cameraPosition.x -= 30 * deltaTime;
+            if (IsKeyDown(KEY_D))
+                cameraPosition.x += 30 * deltaTime;
+            if (IsKeyDown(KEY_W))
+                cameraPosition.y += 30 * deltaTime;
+            if (IsKeyDown(KEY_S))
+                cameraPosition.y -= 30 * deltaTime;
+            if (IsKeyDown(KEY_Q))
+                cameraPosition.z -= 30 * deltaTime;
+            if (IsKeyDown(KEY_E))
+                cameraPosition.z += 30 * deltaTime;
+        }
+        skipFrame = !skipFrame;
+#endif
 
         // // Set up rotation matrices
         // theta += 0.5f * deltaTime;
@@ -149,14 +141,19 @@ public:
         worldMatrix = matrixMultiplyMatrix(rotationMatrixZ, rotationMatrixX);
         worldMatrix = matrixMultiplyMatrix(worldMatrix, translationMatrix);
 
-        Vector3 cameraUp = {0.0f, 1.0f, 0.0f};
-        Vector3 cameraTarget = {0.0f, 0.0f, 1.0f};
+        Vector4 cameraUp = {0.0f, 1.0f, 0.0f};
+        Vector4 cameraTarget = {0.0f, 0.0f, 1.0f};
         Matrix4 cameraRotationMatrix = matrixMakeRotationY(yaw);
         cameraLookDirection = matrixMultiplyVector(cameraRotationMatrix, cameraTarget);
         cameraTarget = Vector_Add(cameraPosition, cameraLookDirection);
         Matrix4 cameraMatrix = matrixPointAt(cameraPosition, cameraTarget, cameraUp);
 
         Matrix4 viewMatrix = matrixQuickInverse(cameraMatrix);
+
+        // printf("S[%f, %f, %f, %f]\n", viewMatrix.m[0][0], viewMatrix.m[0][1], viewMatrix.m[0][2], viewMatrix.m[0][3]);
+        // printf("[%f, %f, %f, %f]\n", viewMatrix.m[1][0], viewMatrix.m[1][1], viewMatrix.m[1][2], viewMatrix.m[1][3]);
+        // printf("[%f, %f, %f, %f]\n", viewMatrix.m[2][0], viewMatrix.m[2][1], viewMatrix.m[2][2], viewMatrix.m[2][3]);
+        // printf("[%f, %f, %f, %f]E\n", viewMatrix.m[3][0], viewMatrix.m[3][1], viewMatrix.m[3][2], viewMatrix.m[3][3]);
 
         std::vector<Triangle> trianglesToRender;
 
@@ -168,7 +165,7 @@ public:
             transformedTriangle.vertices[1] = matrixMultiplyVector(worldMatrix, tri.vertices[1]);
             transformedTriangle.vertices[2] = matrixMultiplyVector(worldMatrix, tri.vertices[2]);
 
-            Vector3 normal, line1, line2;
+            Vector4 normal, line1, line2;
             line1 = Vector_Sub(transformedTriangle.vertices[1], transformedTriangle.vertices[0]);
             line2 = Vector_Sub(transformedTriangle.vertices[2], transformedTriangle.vertices[0]);
 
@@ -177,17 +174,22 @@ public:
             // It's normally normal to normalise the normal
             normal = Vector_Normalise(normal);
 
-            Vector3 cameraRay = Vector_Sub(transformedTriangle.vertices[0], cameraPosition);
+            Vector4 cameraRay = Vector_Sub(transformedTriangle.vertices[0], cameraPosition);
 
             if (Vector_DotProduct(normal, cameraRay) < 0.0f)
             {
 
-                Vector3 lightDirection = {0.0f, 1.0f, -1.0f};
+                Vector4 lightDirection = {0.0f, 1.0f, -1.0f};
 
                 lightDirection = Vector_Normalise(lightDirection);
 
-                // How similar is normal to light direction
+// How similar is normal to light direction
+#ifdef ZYNGINE_ESP32S3
                 float dp = max(0.1f, Vector_DotProduct(normal, lightDirection));
+#endif
+#ifndef ZYNGINE_ES32S3
+                float dp = std::max(0.1f, Vector_DotProduct(normal, lightDirection));
+#endif
 
                 uint16_t finalColor = RGB888ToRGB565(255, 255, 255, dp);
 
@@ -220,7 +222,7 @@ public:
                     projectedTriangle.vertices[1].y *= -1.0f;
                     projectedTriangle.vertices[2].y *= -1.0f;
 
-                    Vector3 offsetView = {1, 1, 0};
+                    Vector4 offsetView = {1, 1, 0};
                     projectedTriangle.vertices[0] = Vector_Add(projectedTriangle.vertices[0], offsetView);
                     projectedTriangle.vertices[1] = Vector_Add(projectedTriangle.vertices[1], offsetView);
                     projectedTriangle.vertices[2] = Vector_Add(projectedTriangle.vertices[2], offsetView);
@@ -245,7 +247,8 @@ public:
         // Clear the screen and draw the triangles
         renderer->clear();
         sprintf(fps, "%.2f Axis: %d , %f, %f, %f", (1.0f / deltaTime), toggle, cameraPosition.x, cameraPosition.y, cameraPosition.z);
-        renderer->printText(20, 20, fps, TFT_BLACK, TFT_WHITE);
+
+        renderer->printText(20, 20, fps, 0x0000, 0xFFFF);
 
         for (auto &triangle : trianglesToRender)
         {
@@ -309,6 +312,7 @@ public:
             // Draw the transformed, viewed, clipped, projected, sorted, clipped triangles
             for (auto &t : listTriangles)
             {
+                // printf("(%d, %d), (%d, %d), (%d, %d)", t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y);
                 renderer->fillTriangle(t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y, t.color);
                 // DrawTriangle(t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y, PIXEL_SOLID, FG_BLACK);
             }
@@ -317,8 +321,8 @@ public:
 };
 
 MyGame game;
-Audio audio;
 
+#ifdef ZYNGINE_ESP32S3
 void setup()
 {
     Serial.begin(115200);
@@ -342,3 +346,15 @@ void setup()
 void loop()
 {
 }
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+int main()
+{
+    printf("Hello World");
+    if (game.initialize(320, 480))
+    {
+        game.run();
+    }
+}
+#endif

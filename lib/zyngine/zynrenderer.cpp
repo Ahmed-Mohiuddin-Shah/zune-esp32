@@ -1,5 +1,6 @@
 #include "ZynRenderer.h"
 
+#ifdef ZYNGINE_ESP32S3
 ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *lcd_display)
 {
     this->screenWidth = screenWidth;
@@ -26,55 +27,157 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *l
     previousFrame->createSprite(screenWidth, screenHeight);
     // previousFrame->setRotation(0); // No need to set rotation for sprite
 }
+#endif
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+ZynRenderer::ZynRenderer(int screenWidth, int screenHeight)
+{
+    InitWindow(screenWidth, screenHeight, "Zyngine");
+    SetTargetFPS(60);
+    this->screenWidth = screenWidth;
+    this->screenHeight = screenHeight;
+}
+#endif
 
 void ZynRenderer::clear()
 {
+#ifdef ZYNGINE_ESP32S3
     currentFrame->clear();
+#endif
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    ClearBackground(BLACK);
+#endif
 }
 
 void ZynRenderer::printText(int x, int y, const char *text, uint16_t backgroundColor, uint16_t textColor)
 {
+#ifdef ZYNGINE_ESP32S3
     currentFrame->setCursor(x, y, 2);
     currentFrame->setTextColor(backgroundColor, textColor);
     currentFrame->setTextSize(1);
     currentFrame->print(text);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    DrawText(text, x, y, 20, WHITE);
+#endif
 }
 
 void ZynRenderer::drawPixel(int x, int y, uint16_t color)
 {
+#ifdef ZYNGINE_ESP32S3
     currentFrame->drawPixel(x, y, color);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    // Convert 16-bit color to Raylib Color
+    Color raylibColor = {
+        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
+        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
+        (unsigned char)(color & 0x1F) * 255 / 31,
+        255};
+    DrawPixel(x, y, raylibColor);
+#endif
 }
 
 void ZynRenderer::drawLine(int x1, int y1, int x2, int y2, uint16_t color)
 {
+#ifdef ZYNGINE_ESP32S3
     currentFrame->drawLine(x1, y2, x2, y2, color);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    // Convert 16-bit color to Raylib Color
+    Color raylibColor = {
+        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
+        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
+        (unsigned char)(color & 0x1F) * 255 / 31,
+        255};
+
+    DrawLine(x1, y1, x2, y2, raylibColor);
+#endif
 }
 
 void ZynRenderer::drawRect(int x, int y, int width, int height, uint16_t color)
 {
+#ifdef ZYNGINE_ESP32S3
     currentFrame->drawRect(x, y, width, height, color);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    // Convert 16-bit color to Raylib Color
+    Color raylibColor = {
+        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
+        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
+        (unsigned char)(color & 0x1F) * 255 / 31,
+        255};
+
+    DrawRectangleLines(x, y, width, height, raylibColor);
+#endif
 }
 
 void ZynRenderer::fillRect(int x, int y, int width, int height, uint16_t color)
 {
+#ifdef ZYNGINE_ESP32S3
     currentFrame->fillRect(x, y, width, height, color);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    // Convert 16-bit color to Raylib Color
+    Color raylibColor = {
+        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
+        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
+        (unsigned char)(color & 0x1F) * 255 / 31,
+        255};
+
+    DrawRectangle(x, y, width, height, raylibColor);
+#endif
 }
 
 void ZynRenderer::drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color)
 {
+#ifdef ZYNGINE_ESP32S3
     currentFrame->drawTriangle(x1, y1, x2, y2, x3, y3, color);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    // Convert 16-bit color to Raylib Color
+    Color raylibColor = {
+        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
+        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
+        (unsigned char)(color & 0x1F) * 255 / 31,
+        255};
+
+    DrawTriangleLines({(float)x1, (float)y1}, {(float)x2, (float)y2}, {(float)x3, (float)y3}, raylibColor);
+#endif
 }
 
 void ZynRenderer::fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color)
 {
+#ifdef ZYNGINE_ESP32S3
     currentFrame->fillTriangle(x1, y1, x2, y2, x3, y3, color);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    // Convert 16-bit color to Raylib Color
+    Color raylibColor = {
+        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
+        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
+        (unsigned char)(color & 0x1F) * 255 / 31,
+        255};
+
+    DrawTriangle({(float)x1, (float)y1}, {(float)x2, (float)y2}, {(float)x3, (float)y3}, raylibColor);
+#endif
 }
 
 void ZynRenderer::drawTexture(int x, int y, ZynTexture *texture)
 {
+#ifdef ZYNGINE_ESP32S3
     Serial.println("TODO: Implement DrawTexture Function");
+    // currentFrame->drawBitmap(x, y, texture->getWidth(), texture->getHeight(), texture->getBuffer());
+#endif
 }
 
+#ifdef ZYNGINE_ESP32S3
 void ZynRenderer::diffDraw()
 {
     union
@@ -130,3 +233,4 @@ void ZynRenderer::diffDraw()
     currentFrame = previousFrame;
     previousFrame = swap;
 }
+#endif

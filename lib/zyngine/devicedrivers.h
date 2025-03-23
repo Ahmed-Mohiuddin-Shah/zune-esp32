@@ -1,6 +1,9 @@
 #ifndef DEVICEDRIVERS_H
 #define DEVICEDRIVERS_H
 
+#include <config_user.h>
+
+#ifdef ZYNGINE_ESP32S3
 #include <LovyanGFX.hpp>
 
 class ParallelILI9486 : public lgfx::LGFX_Device
@@ -12,5 +15,7 @@ private:
 public:
     ParallelILI9486(void);
 };
+
+#endif
 
 #endif
