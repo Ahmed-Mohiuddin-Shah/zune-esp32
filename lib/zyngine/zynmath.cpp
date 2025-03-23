@@ -39,3 +39,19 @@ uint16_t RGB888ToRGB565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp)
 
     return rgb565;
 }
+
+uint16_t RGBFloatToRGB565(float r, float g, float b)
+{
+    // Clamp the values between 0.0f and 1.0f
+    r = std::max(0.0f, std::min(1.0f, r));
+    g = std::max(0.0f, std::min(1.0f, g));
+    b = std::max(0.0f, std::min(1.0f, b));
+
+    // Convert float values to 8-bit integers
+    uint8_t red8 = static_cast<uint8_t>(r * 255.0f);
+    uint8_t green8 = static_cast<uint8_t>(g * 255.0f);
+    uint8_t blue8 = static_cast<uint8_t>(b * 255.0f);
+
+    // Use the existing function to convert to RGB565
+    return RGB888ToRGB565(red8, green8, blue8, 1.0f);
+}

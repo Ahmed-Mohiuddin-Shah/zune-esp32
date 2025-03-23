@@ -18,6 +18,7 @@ class ZynRenderer
 private:
     int screenHeight;
     int screenWidth;
+    float *pDepthBuffer = nullptr;
 
 #ifdef ZYNGINE_ESP32S3
     lgfx::LGFX_Device *lcd_display;
@@ -43,6 +44,9 @@ public:
     void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
     void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
     void drawTexture(int x, int y, ZynTexture *texture);
+    void drawTexturedTriangle(int x1, int y1, float u1, float v1, float w1,
+                          int x2, int y2, float u2, float v2, float w2,
+                          int x3, int y3, float u3, float v3, float w3, ZynTexture *texture);
 };
 
 #endif

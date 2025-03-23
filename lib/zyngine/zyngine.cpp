@@ -7,6 +7,7 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     // Example: Set up the renderer, input, etc.
     screenWidth = width;
     screenHeight = height;
+    onUserCreate();
 
 #ifdef ZYNGINE_ESP32S3
     renderer = new ZynRenderer(screenWidth, screenHeight, new ParallelILI9486());
@@ -18,7 +19,6 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     renderer = new ZynRenderer(screenWidth, screenHeight);
 #endif
 
-    onUserCreate();
     return true;
 }
 
