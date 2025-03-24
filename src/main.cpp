@@ -1,5 +1,6 @@
 #include <zyngine.h>
 #include <zutils.h>
+#include <zyncolor.h>
 
 #ifdef ZYNGINE_ESP32S3
 #include <Arduino.h>
@@ -36,6 +37,7 @@ Audio audio;
 
 #include <list>
 #include <algorithm>
+#include <iostream>
 
 class MyGame : public Zyngine
 {
@@ -60,7 +62,7 @@ public:
     {
 
         // Load the cube mesh from an OBJ file
-        if (!cubeMesh.loadFromObjectFile("./resources/3d-models/mountains.obj"))
+        if (!cubeMesh.loadFromObjectFile("./resources/optimized_assets/3d_models/texture_test.obj", true))
         {
 #ifdef ZYNGINE_ESP32S3
             Serial.println("Failed to load cube mesh");
@@ -68,9 +70,46 @@ public:
 #endif
         }
 
-        projectionMatrix = createProjectionMatrix(screenWidth, screenHeight, 90.0f, 0.1f, 100.0f);
+        std::cout << "Cube Mesh Information:" << std::endl;
+        std::cout << "Number of triangles: " << cubeMesh.tris.size() << std::endl;
 
-        cameraPosition = {0.0f, 0.0f, 5.0f};
+        for (size_t i = 0; i < cubeMesh.tris.size(); ++i)
+        {
+            const auto &tri = cubeMesh.tris[i];
+            std::cout << "Triangle " << i << ":" << std::endl;
+            for (int j = 0; j < 3; ++j)
+            {
+                std::cout << "  Vertex " << j << ": ("
+                          << tri.vertices[j].x << ", "
+                          << tri.vertices[j].y << ", "
+                          << tri.vertices[j].z << ")" << std::endl;
+            }
+            for (int j = 0; j < 3; ++j)
+            {
+                std::cout << "  UVs " << j << ": ("
+                          << tri.texture[j].x << ", "
+                          << tri.texture[j].y << ", "
+                          << tri.texture[j].z << ")" << std::endl;
+            }
+            std::cout << "  Material Index: " << tri.materialIndex << std::endl;
+            std::cout << "  Texture Size: " << cubeMesh.textures[tri.materialIndex].width << "x" << cubeMesh.textures[tri.materialIndex].height << std::endl;
+        }
+
+        for (size_t i = 0; i < 10; ++i)
+        {
+            const auto &mat = cubeMesh.materials[i];
+            std::cout << "Material " << i << ":" << std::endl;
+            std::cout << "  Ambient: " << mat.Ka << std::endl;
+            std::cout << "  Diffuse: " << mat.Kd << std::endl;
+            std::cout << "  Specular: " << mat.Ks << std::endl;
+            std::cout << "  Shininess: " << mat.Ns << std::endl;
+        }
+
+        std::cout << "file Loaded" << std::endl;
+
+        projectionMatrix = createProjectionMatrix(screenWidth, screenHeight, 60.0f, 0.1f, 100.0f);
+
+        cameraPosition = {30.0f, 20.0f, -90.0f};
 
 #ifdef ZYNGINE_ESP32S3
         encoder.attachFullQuad(CLK, DT);
@@ -127,6 +166,9 @@ public:
         skipFrame = !skipFrame;
 #endif
 
+        // renderer->printText(0, 0, "Hello World", ZYN_BLACK, ZYN_WHITE);
+
+        // return;
         // // Set up rotation matrices
         // theta += 0.5f * deltaTime;
 
@@ -150,11 +192,6 @@ public:
 
         Matrix4 viewMatrix = matrixQuickInverse(cameraMatrix);
 
-        // printf("S[%f, %f, %f, %f]\n", viewMatrix.m[0][0], viewMatrix.m[0][1], viewMatrix.m[0][2], viewMatrix.m[0][3]);
-        // printf("[%f, %f, %f, %f]\n", viewMatrix.m[1][0], viewMatrix.m[1][1], viewMatrix.m[1][2], viewMatrix.m[1][3]);
-        // printf("[%f, %f, %f, %f]\n", viewMatrix.m[2][0], viewMatrix.m[2][1], viewMatrix.m[2][2], viewMatrix.m[2][3]);
-        // printf("[%f, %f, %f, %f]E\n", viewMatrix.m[3][0], viewMatrix.m[3][1], viewMatrix.m[3][2], viewMatrix.m[3][3]);
-
         std::vector<Triangle> trianglesToRender;
 
         for (auto tri : cubeMesh.tris)
@@ -164,6 +201,9 @@ public:
             transformedTriangle.vertices[0] = matrixMultiplyVector(worldMatrix, tri.vertices[0]);
             transformedTriangle.vertices[1] = matrixMultiplyVector(worldMatrix, tri.vertices[1]);
             transformedTriangle.vertices[2] = matrixMultiplyVector(worldMatrix, tri.vertices[2]);
+            transformedTriangle.texture[0] = tri.texture[0];
+            transformedTriangle.texture[1] = tri.texture[1];
+            transformedTriangle.texture[2] = tri.texture[2];
 
             Vector4 normal, line1, line2;
             line1 = Vector_Sub(transformedTriangle.vertices[1], transformedTriangle.vertices[0]);
@@ -197,6 +237,9 @@ public:
                 viewedTriangle.vertices[1] = matrixMultiplyVector(viewMatrix, transformedTriangle.vertices[1]);
                 viewedTriangle.vertices[2] = matrixMultiplyVector(viewMatrix, transformedTriangle.vertices[2]);
                 viewedTriangle.color;
+                viewedTriangle.texture[0] = transformedTriangle.texture[0];
+                viewedTriangle.texture[1] = transformedTriangle.texture[1];
+                viewedTriangle.texture[2] = transformedTriangle.texture[2];
 
                 int noClippedTriangles = 0;
                 Triangle clipped[2];
@@ -209,7 +252,25 @@ public:
                     projectedTriangle.vertices[1] = matrixMultiplyVector(projectionMatrix, clipped[n].vertices[1]);
                     projectedTriangle.vertices[2] = matrixMultiplyVector(projectionMatrix, clipped[n].vertices[2]);
                     projectedTriangle.color = finalColor;
+                    projectedTriangle.texture[0] = clipped[n].texture[0];
+                    projectedTriangle.texture[1] = clipped[n].texture[1];
+                    projectedTriangle.texture[2] = clipped[n].texture[2];
 
+                    projectedTriangle.texture[0].x = projectedTriangle.texture[0].x / projectedTriangle.vertices[0].w;
+                    projectedTriangle.texture[1].x = projectedTriangle.texture[1].x / projectedTriangle.vertices[1].w;
+                    projectedTriangle.texture[2].x = projectedTriangle.texture[2].x / projectedTriangle.vertices[2].w;
+
+                    projectedTriangle.texture[0].y = projectedTriangle.texture[0].y / projectedTriangle.vertices[0].w;
+                    projectedTriangle.texture[1].y = projectedTriangle.texture[1].y / projectedTriangle.vertices[1].w;
+                    projectedTriangle.texture[2].y = projectedTriangle.texture[2].y / projectedTriangle.vertices[2].w;
+
+                    projectedTriangle.texture[0].z = 1.0f / projectedTriangle.vertices[0].w;
+                    projectedTriangle.texture[1].z = 1.0f / projectedTriangle.vertices[1].w;
+                    projectedTriangle.texture[2].z = 1.0f / projectedTriangle.vertices[2].w;
+
+                    // Scale into view, we moved the normalising into cartesian space
+                    // out of the matrix.vector function from the previous videos, so
+                    // do this manually
                     projectedTriangle.vertices[0] = Vector_Div(projectedTriangle.vertices[0], projectedTriangle.vertices[0].w);
                     projectedTriangle.vertices[1] = Vector_Div(projectedTriangle.vertices[1], projectedTriangle.vertices[1].w);
                     projectedTriangle.vertices[2] = Vector_Div(projectedTriangle.vertices[2], projectedTriangle.vertices[2].w);
@@ -237,24 +298,19 @@ public:
                 }
             }
         }
-        // Sort triangles from back to front
-        sort(trianglesToRender.begin(), trianglesToRender.end(), [](Triangle &t1, Triangle &t2)
-             {
-			float z1 = (t1.vertices[0].z + t1.vertices[1].z + t1.vertices[2].z) / 3.0f;
-			float z2 = (t2.vertices[0].z + t2.vertices[1].z + t2.vertices[2].z) / 3.0f;
-			return z1 > z2; });
+
+        // // Sort triangles from back to front
+        // sort(trianglesToRender.begin(), trianglesToRender.end(), [](Triangle &t1, Triangle &t2)
+        //      {
+        // 	float z1 = (t1.vertices[0].z + t1.vertices[1].z + t1.vertices[2].z) / 3.0f;
+        // 	float z2 = (t2.vertices[0].z + t2.vertices[1].z + t2.vertices[2].z) / 3.0f;
+        // 	return z1 > z2; });
 
         // Clear the screen and draw the triangles
         renderer->clear();
         sprintf(fps, "%.2f Axis: %d , %f, %f, %f", (1.0f / deltaTime), toggle, cameraPosition.x, cameraPosition.y, cameraPosition.z);
 
         renderer->printText(20, 20, fps, 0x0000, 0xFFFF);
-
-        for (auto &triangle : trianglesToRender)
-        {
-            renderer->fillTriangle(triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[2].x, triangle.vertices[2].y, triangle.color);
-            // renderer->drawTriangle(triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[2].x, triangle.vertices[2].y, TFT_BLACK);
-        }
 
         // Loop through all transformed, viewed, projected, and sorted triangles
         for (auto &triToRaster : trianglesToRender)
@@ -312,11 +368,40 @@ public:
             // Draw the transformed, viewed, clipped, projected, sorted, clipped triangles
             for (auto &t : listTriangles)
             {
-                // printf("(%d, %d), (%d, %d), (%d, %d)", t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y);
-                renderer->fillTriangle(t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y, t.color);
-                // DrawTriangle(t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y, PIXEL_SOLID, FG_BLACK);
+                renderer->drawTexturedTriangle(t.vertices[0].x, t.vertices[0].y, t.texture[0].x, t.texture[0].y, t.texture[0].z,
+                                 t.vertices[1].x, t.vertices[1].y, t.texture[1].x, t.texture[1].y, t.texture[1].z,
+                                 t.vertices[2].x, t.vertices[2].y, t.texture[2].x, t.texture[2].y, t.texture[2].z, cubeMesh.materials[t.materialIndex].texture);
+
+            renderer->fillTriangle(t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y, t.color);
+            renderer->drawTriangle(t.vertices[0].x, t.vertices[0].y, t.vertices[1].x, t.vertices[1].y, t.vertices[2].x, t.vertices[2].y, 0xFFFF);
             }
         }
+
+        // for (auto &triangle : trianglesToRender)
+        // {
+        //     // printf("Triangle vertices: \n");
+        //     // printf("V1: (%f, %f, %f)\n", triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[0].z);
+        //     // printf("V2: (%f, %f, %f)\n", triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[1].z);
+        //     // printf("V3: (%f, %f, %f)\n", triangle.vertices[2].x, triangle.vertices[2].y, triangle.vertices[2].z);
+        //     // printf("Material info: \n");
+        //     // printf("Ambient: (%f)\n", triangle.mat.Ka);
+        //     // printf("Diffuse: (%f)\n", triangle.mat.Kd);
+        //     // printf("Specular: (%f)\n", triangle.mat.Ks);
+        //     // printf("Shininess: %f\n", triangle.mat.Ns);
+        //     // printf("W, H : %d, %d\n", triangle.mat.texture->width, triangle.mat.texture->height);
+        //     // std::cout << triangle.texture[0].x << ", " << triangle.texture[0].y << ", " << triangle.texture[0].z << std::endl;
+        //     // std::cout << triangle.texture[1].x << ", " << triangle.texture[1].y << ", " << triangle.texture[1].z << std::endl;
+        //     // std::cout << triangle.texture[2].x << ", " << triangle.texture[2].y << ", " << triangle.texture[2].z << std::endl;
+
+        //     // renderer->drawTexture(0, 0, triangle.mat.texture);
+        //     // renderer->drawTexturedTriangle(
+        //     //     triangle.vertices[0].x, triangle.vertices[0].y, triangle.texture[0].x, triangle.texture[0].y, triangle.texture[0].z,
+        //     //     triangle.vertices[1].x, triangle.vertices[1].y, triangle.texture[1].x, triangle.texture[1].y, triangle.texture[1].z,
+        //     //     triangle.vertices[2].x, triangle.vertices[2].y, triangle.texture[2].x, triangle.texture[2].y, triangle.texture[2].z,
+        //     //     (cubeMesh.materials[triangle.materialIndex].texture));
+        //     // renderer->fillTriangle(triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[2].x, triangle.vertices[2].y, triangle.color);
+        //     renderer->drawTriangle(triangle.vertices[0].x, triangle.vertices[0].y, triangle.vertices[1].x, triangle.vertices[1].y, triangle.vertices[2].x, triangle.vertices[2].y, 0xFFFF);
+        // }
     }
 };
 
@@ -351,7 +436,7 @@ void loop()
 #ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
 int main()
 {
-    printf("Hello World");
+    std::cout << "Hello World";
     if (game.initialize(320, 480))
     {
         game.run();

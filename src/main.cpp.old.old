@@ -1,0 +1,148 @@
+#include <zyngine.h>
+#include <zutils.h>
+
+#ifdef ZYNGINE_ESP32S3
+#include <Arduino.h>
+#include "Audio.h"
+#include "ESP32Encoder.h"
+
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
+ESP32Encoder encoder;
+Audio audio;
+// I2S Connections for Speaker
+#define I2S_DOUT 40
+#define I2S_BCLK 41
+#define I2S_LRC 42
+
+// SD CARD PINS
+#define SD_SCK 36
+#define SD_MISO 37
+#define SD_MOSI 35
+#define SD_CS 39
+
+#define CLK 18 // CLK ENCODER
+#define DT 17  // DT ENCODER
+#define ENCODER_BUTTON 43
+#endif
+#ifndef ZYNGINE_ESP32S3
+#include <math.h>
+#include <stdio.h>
+#endif
+
+#include <fstream>
+#include <strstream>
+
+#include <list>
+#include <algorithm>
+
+class MyGame : public Zyngine
+{
+private:
+    ZyngineMesh cubeMesh;
+    Matrix4 projectionMatrix;
+
+    Vector4 cameraPosition;
+    Vector4 cameraLookDirection;
+
+    float yaw;
+    int toggle = 0;
+
+    float theta;
+    char fps[50];
+    int32_t count;
+    bool skipFrame = true;
+    ZynTexture *tex;
+
+public:
+    void
+    onUserCreate() override
+    {
+
+        tex = new ZynTexture("Hello", "./resources/optimized_assets/3d_models/canvas.zyntex");
+
+#ifdef ZYNGINE_ESP32S3
+        Serial.println("Failed to load cube mesh");
+        return;
+#endif
+
+#ifdef ZYNGINE_ESP32S3
+        encoder.attachFullQuad(CLK, DT);
+        encoder.setCount(0);
+        pinMode(ENCODER_BUTTON, INPUT_PULLUP);
+#endif
+    }
+
+    void onUserUpdate(float deltaTime) override
+    {
+
+#ifdef ZYNGINE_ESP32S3
+        if (digitalRead(ENCODER_BUTTON) == LOW)
+        {
+            toggle = (toggle + 1) % 3;
+        }
+        count = encoder.getCount();
+
+        if (count != 0)
+        {
+            if (toggle == 0)
+            {
+                cameraPosition.x += count * deltaTime;
+            }
+            else if (toggle == 1)
+            {
+                cameraPosition.y += count * deltaTime;
+            }
+            else
+            {
+                cameraPosition.z += count * deltaTime;
+            }
+        }
+        encoder.setCount(0);
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+        renderer->drawTexture(0, 0, tex);
+#endif
+    }
+};
+
+MyGame game;
+
+#ifdef ZYNGINE_ESP32S3
+void setup()
+{
+    Serial.begin(115200);
+    SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+    if (!SD.begin(SD_CS))
+    {
+        Serial.println("Card Mount Failed");
+    }
+
+    // Setup I2S
+    audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
+
+    // Set Volume
+    audio.setVolume(5);
+    if (game.initialize(320, 480))
+    {
+        game.run();
+    }
+}
+
+void loop()
+{
+}
+#endif
+
+#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+int main()
+{
+    printf("Hello World");
+    if (game.initialize(320, 480))
+    {
+        game.run();
+    }
+}
+#endif
