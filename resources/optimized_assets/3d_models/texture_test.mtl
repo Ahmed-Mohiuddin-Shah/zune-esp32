@@ -1,0 +1,25 @@
+# Exported from 3D Builder
+
+newmtl Mat_0
+Kd 1.000000 1.000000 1.000000
+map_Kd walnut.jpg
+
+newmtl Mat_1
+Kd 1.000000 1.000000 1.000000
+map_Kd denim.jpg
+
+newmtl Mat_2
+Kd 1.000000 1.000000 1.000000
+map_Kd canvas.jpg
+
+newmtl Mat_3
+Kd 1.000000 1.000000 1.000000
+map_Kd fishfosl.jpg
+
+newmtl Mat_4
+Kd 1.000000 1.000000 1.000000
+map_Kd grmarble.jpg
+
+newmtl Mat_5
+Kd 1.000000 1.000000 1.000000
+map_Kd purmesh.jpg
