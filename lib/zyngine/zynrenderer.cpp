@@ -47,6 +47,8 @@ void ZynRenderer::clear()
     currentFrame->clear();
 #endif
 #ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    for (int i = 0; i < screenWidth * screenHeight; i++)
+        pDepthBuffer[i] = 0.0f;
     ClearBackground(BLACK);
 #endif
 }
@@ -78,6 +80,10 @@ void ZynRenderer::drawPixel(int x, int y, uint16_t color)
         (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
         (unsigned char)(color & 0x1F) * 255 / 31,
         255};
+    if (x < 0 || y < 0)
+    {
+        return;
+    }
     DrawPixel(x, y, raylibColor);
 #endif
 }
@@ -194,52 +200,182 @@ void ZynRenderer::drawTexturedTriangle(int x1, int y1, float u1, float v1, float
                                        int x3, int y3, float u3, float v3, float w3,
                                        ZynTexture *texture)
 {
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    // Calculate bounding box of the triangle
-    int minX = std::min({x1, x2, x3});
-    int minY = std::min({y1, y2, y3});
-    int maxX = std::max({x1, x2, x3});
-    int maxY = std::max({y1, y2, y3});
-
-    // Loop through each pixel in the bounding box
-    for (int y = minY; y <= maxY; y++)
+    if (y2 < y1)
     {
-        for (int x = minX; x <= maxX; x++)
+        std::swap(y1, y2);
+        std::swap(x1, x2);
+        std::swap(u1, u2);
+        std::swap(v1, v2);
+        std::swap(w1, w2);
+    }
+
+    if (y3 < y1)
+    {
+        std::swap(y1, y3);
+        std::swap(x1, x3);
+        std::swap(u1, u3);
+        std::swap(v1, v3);
+        std::swap(w1, w3);
+    }
+
+    if (y3 < y2)
+    {
+        std::swap(y2, y3);
+        std::swap(x2, x3);
+        std::swap(u2, u3);
+        std::swap(v2, v3);
+        std::swap(w2, w3);
+    }
+
+    int dy1 = y2 - y1;
+    int dx1 = x2 - x1;
+    float dv1 = v2 - v1;
+    float du1 = u2 - u1;
+    float dw1 = w2 - w1;
+
+    int dy2 = y3 - y1;
+    int dx2 = x3 - x1;
+    float dv2 = v3 - v1;
+    float du2 = u3 - u1;
+    float dw2 = w3 - w1;
+
+    float tex_u, tex_v, tex_w;
+
+    float dax_step = 0, dbx_step = 0,
+          du1_step = 0, dv1_step = 0,
+          du2_step = 0, dv2_step = 0,
+          dw1_step = 0, dw2_step = 0;
+
+    if (dy1)
+        dax_step = dx1 / (float)abs(dy1);
+    if (dy2)
+        dbx_step = dx2 / (float)abs(dy2);
+
+    if (dy1)
+        du1_step = du1 / (float)abs(dy1);
+    if (dy1)
+        dv1_step = dv1 / (float)abs(dy1);
+    if (dy1)
+        dw1_step = dw1 / (float)abs(dy1);
+
+    if (dy2)
+        du2_step = du2 / (float)abs(dy2);
+    if (dy2)
+        dv2_step = dv2 / (float)abs(dy2);
+    if (dy2)
+        dw2_step = dw2 / (float)abs(dy2);
+
+    if (dy1)
+    {
+        for (int i = y1; i <= y2; i++)
         {
-            // Calculate barycentric coordinates
-            float lambda1 = ((float)(y2 - y3) * (x - x3) + (float)(x3 - x2) * (y - y3)) /
-                            ((float)(y2 - y3) * (x1 - x3) + (float)(x3 - x2) * (y1 - y3));
-            float lambda2 = ((float)(y3 - y1) * (x - x3) + (float)(x1 - x3) * (y - y3)) /
-                            ((float)(y2 - y3) * (x1 - x3) + (float)(x3 - x2) * (y1 - y3));
-            float lambda3 = 1.0f - lambda1 - lambda2;
+            int ax = x1 + (float)(i - y1) * dax_step;
+            int bx = x1 + (float)(i - y1) * dbx_step;
 
-            // Check if the pixel is inside the triangle
-            if (lambda1 >= 0 && lambda2 >= 0 && lambda3 >= 0)
+            float tex_su = u1 + (float)(i - y1) * du1_step;
+            float tex_sv = v1 + (float)(i - y1) * dv1_step;
+            float tex_sw = w1 + (float)(i - y1) * dw1_step;
+
+            float tex_eu = u1 + (float)(i - y1) * du2_step;
+            float tex_ev = v1 + (float)(i - y1) * dv2_step;
+            float tex_ew = w1 + (float)(i - y1) * dw2_step;
+
+            if (ax > bx)
             {
-                // Interpolate depth
-                float z = lambda1 * w1 + lambda2 * w2 + lambda3 * w3;
-                int index = y * screenWidth + x;
+                std::swap(ax, bx);
+                std::swap(tex_su, tex_eu);
+                std::swap(tex_sv, tex_ev);
+                std::swap(tex_sw, tex_ew);
+            }
 
-                // // Depth test
-                if (z < pDepthBuffer[index])
+            tex_u = tex_su;
+            tex_v = tex_sv;
+            tex_w = tex_sw;
+
+            float tstep = 1.0f / ((float)(bx - ax));
+            float t = 0.0f;
+
+            for (int j = ax; j < bx; j++)
+            {
+                tex_u = (1.0f - t) * tex_su + t * tex_eu;
+                tex_v = (1.0f - t) * tex_sv + t * tex_ev;
+                tex_w = (1.0f - t) * tex_sw + t * tex_ew;
+                std::cout << i << ", " << j << ", " << tex_u / tex_w << ", " << tex_v / tex_w << std::endl;
+                if (tex_w > pDepthBuffer[i * screenWidth + j])
                 {
-                    // Interpolate texture coordinates
-                    float u = lambda1 * u1 + lambda2 * u2 + lambda3 * u3;
-                    float v = lambda1 * v1 + lambda2 * v2 + lambda3 * v3;
-
-                    // // Get texture color
-                    uint16_t color = texture->GetPixel(u * texture->width, v * texture->height);
-
-                    // // Draw pixel
-                    drawPixel(x, y, color);
-
-                    // Update depth buffer
-                    pDepthBuffer[index] = z;
+                drawPixel(j, i, texture->GetPixel(tex_u / tex_w, tex_v / tex_w));
+                pDepthBuffer[i * screenWidth + j] = tex_w;
                 }
+                t += tstep;
             }
         }
     }
-#endif
+
+    dy1 = y3 - y2;
+    dx1 = x3 - x2;
+    dv1 = v3 - v2;
+    du1 = u3 - u2;
+    dw1 = w3 - w2;
+
+    if (dy1)
+        dax_step = dx1 / (float)abs(dy1);
+    if (dy2)
+        dbx_step = dx2 / (float)abs(dy2);
+
+    du1_step = 0, dv1_step = 0;
+    if (dy1)
+        du1_step = du1 / (float)abs(dy1);
+    if (dy1)
+        dv1_step = dv1 / (float)abs(dy1);
+    if (dy1)
+        dw1_step = dw1 / (float)abs(dy1);
+
+    if (dy1)
+    {
+        for (int i = y2; i <= y3; i++)
+        {
+            int ax = x2 + (float)(i - y2) * dax_step;
+            int bx = x1 + (float)(i - y1) * dbx_step;
+
+            float tex_su = u2 + (float)(i - y2) * du1_step;
+            float tex_sv = v2 + (float)(i - y2) * dv1_step;
+            float tex_sw = w2 + (float)(i - y2) * dw1_step;
+
+            float tex_eu = u1 + (float)(i - y1) * du2_step;
+            float tex_ev = v1 + (float)(i - y1) * dv2_step;
+            float tex_ew = w1 + (float)(i - y1) * dw2_step;
+
+            if (ax > bx)
+            {
+                std::swap(ax, bx);
+                std::swap(tex_su, tex_eu);
+                std::swap(tex_sv, tex_ev);
+                std::swap(tex_sw, tex_ew);
+            }
+
+            tex_u = tex_su;
+            tex_v = tex_sv;
+            tex_w = tex_sw;
+
+            float tstep = 1.0f / ((float)(bx - ax));
+            float t = 0.0f;
+
+            for (int j = ax; j < bx; j++)
+            {
+                tex_u = (1.0f - t) * tex_su + t * tex_eu;
+                tex_v = (1.0f - t) * tex_sv + t * tex_ev;
+                tex_w = (1.0f - t) * tex_sw + t * tex_ew;
+
+                std::cout << i << ", " << j << ", " << tex_u / tex_w << ", " << tex_v / tex_w << std::endl;
+                if (tex_w > pDepthBuffer[i * screenWidth + j])
+                {
+                drawPixel(j, i, texture->GetPixel(tex_u / tex_w, tex_v / tex_w));
+                    pDepthBuffer[i * screenWidth + j] = tex_w;
+                }
+                t += tstep;
+            }
+        }
+    }
 }
 
 #ifdef ZYNGINE_ESP32S3

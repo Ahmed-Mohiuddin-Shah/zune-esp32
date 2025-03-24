@@ -57,6 +57,7 @@ bool ZynTexture::LoadFromZynTex(const char *filePath)
 // Get pixel at (x, y)
 uint16_t ZynTexture::GetPixel(int x, int y)
 {
+    std::cout << x << ", " << y << ", " << y * width + x << std::endl;
     if (x >= 0 && x < width && y >= 0 && y < height)
     {
         return pixels[y * width + x];

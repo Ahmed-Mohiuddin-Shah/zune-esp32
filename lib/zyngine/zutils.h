@@ -13,7 +13,6 @@
 
 #include <zynmath.h>
 
-
 uint16_t rgb888_to_rgb565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp = 1.0f);
 Matrix4 createProjectionMatrix(int screenWidth, int screenHeight, float fov = 90.0f, float nearPlane = 0.1f, float farPlane = 100.0f);
 Vector4 matrixMultiplyVector(Matrix4 &m, Vector4 &i);
@@ -67,7 +66,6 @@ uint16_t rgb888_to_rgb565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp)
     uint16_t rgb565 = red5_shifted | green6_shifted | blue5;
 
     return rgb565;
-
 }
 
 Matrix4 createProjectionMatrix(int screenWidth, int screenHeight, float fov, float nearPlane, float farPlane)
@@ -281,13 +279,13 @@ Vector4 Vector_CrossProduct(Vector4 &v1, Vector4 &v2)
     return v;
 }
 
-Vector4 Vector_IntersectPlane(Vector4 &plane_p, Vector4 &plane_n, Vector4 &lineStart, Vector4 &lineEnd)
+Vector4 Vector_IntersectPlane(Vector4 &plane_p, Vector4 &plane_n, Vector4 &lineStart, Vector4 &lineEnd, float &t)
 {
     plane_n = Vector_Normalise(plane_n);
     float plane_d = -Vector_DotProduct(plane_n, plane_p);
     float ad = Vector_DotProduct(lineStart, plane_n);
     float bd = Vector_DotProduct(lineEnd, plane_n);
-    float t = (-plane_d - ad) / (bd - ad);
+    t = (-plane_d - ad) / (bd - ad);
     Vector4 lineStartToEnd = Vector_Sub(lineEnd, lineStart);
     Vector4 lineToIntersect = Vector_Mul(lineStartToEnd, t);
     return Vector_Add(lineStart, lineToIntersect);
@@ -312,6 +310,11 @@ int triangleClipAgainstPlane(Vector4 plane_p, Vector4 plane_n, Triangle &in_tri,
     Vector4 *outside_points[3];
     int nOutsidePointCount = 0;
 
+    Vector3 *inside_tex[3];
+    int nInsideTexCount = 0;
+    Vector3 *outside_tex[3];
+    int nOutsideTexCount = 0;
+
     // Get signed distance of each point in triangle to plane
     float d0 = dist(in_tri.vertices[0]);
     float d1 = dist(in_tri.vertices[1]);
@@ -320,26 +323,33 @@ int triangleClipAgainstPlane(Vector4 plane_p, Vector4 plane_n, Triangle &in_tri,
     if (d0 >= 0)
     {
         inside_points[nInsidePointCount++] = &in_tri.vertices[0];
+
+        inside_tex[nInsideTexCount++] = &in_tri.texture[0];
     }
     else
     {
         outside_points[nOutsidePointCount++] = &in_tri.vertices[0];
+        outside_tex[nOutsideTexCount++] = &in_tri.texture[0];
     }
     if (d1 >= 0)
     {
         inside_points[nInsidePointCount++] = &in_tri.vertices[1];
+        inside_tex[nInsideTexCount++] = &in_tri.texture[1];
     }
     else
     {
         outside_points[nOutsidePointCount++] = &in_tri.vertices[1];
+        outside_tex[nOutsideTexCount++] = &in_tri.texture[1];
     }
     if (d2 >= 0)
     {
         inside_points[nInsidePointCount++] = &in_tri.vertices[2];
+        inside_tex[nInsideTexCount++] = &in_tri.texture[2];
     }
     else
     {
         outside_points[nOutsidePointCount++] = &in_tri.vertices[2];
+        outside_tex[nOutsideTexCount++] = &in_tri.texture[2];
     }
 
     // Now classify triangle points, and break the input triangle into
@@ -373,11 +383,22 @@ int triangleClipAgainstPlane(Vector4 plane_p, Vector4 plane_n, Triangle &in_tri,
 
         // The inside point is valid, so keep that...
         out_tri1.vertices[0] = *inside_points[0];
+        out_tri1.texture[0] = *inside_tex[0];
 
         // but the two new points are at the locations where the
         // original sides of the triangle (lines) intersect with the plane
-        out_tri1.vertices[1] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[0]);
-        out_tri1.vertices[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[1]);
+        float t;
+        out_tri1.vertices[1] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[0], t);
+
+        out_tri1.texture[1].x = t * (outside_tex[0]->x - inside_tex[0]->x) + inside_tex[0]->x;
+        out_tri1.texture[1].y = t * (outside_tex[0]->y - inside_tex[0]->y) + inside_tex[0]->y;
+        out_tri1.texture[1].z = t * (outside_tex[0]->z - inside_tex[0]->z) + inside_tex[0]->z;
+
+        out_tri1.vertices[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[1], t);
+
+        out_tri1.texture[2].x = t * (outside_tex[1]->x - inside_tex[0]->x) + inside_tex[0]->x;
+        out_tri1.texture[2].y = t * (outside_tex[1]->y - inside_tex[0]->y) + inside_tex[0]->y;
+        out_tri1.texture[2].z = t * (outside_tex[1]->z - inside_tex[0]->z) + inside_tex[0]->z;
 
         return 1; // Return the newly formed single triangle
     }
@@ -398,14 +419,30 @@ int triangleClipAgainstPlane(Vector4 plane_p, Vector4 plane_n, Triangle &in_tri,
         // intersects with the plane
         out_tri1.vertices[0] = *inside_points[0];
         out_tri1.vertices[1] = *inside_points[1];
-        out_tri1.vertices[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[0]);
+        out_tri1.texture[0] = *inside_tex[0];
+        out_tri1.texture[1] = *inside_tex[1];
+
+        float t;
+        out_tri1.vertices[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[0], t);
+
+        out_tri1.texture[2].x = t * (outside_tex[0]->x - inside_tex[0]->x) + inside_tex[0]->x;
+        out_tri1.texture[2].y = t * (outside_tex[0]->y - inside_tex[0]->y) + inside_tex[0]->y;
+        out_tri1.texture[2].z = t * (outside_tex[0]->z - inside_tex[0]->z) + inside_tex[0]->z;
 
         // The second triangle is composed of one of he inside points, a
         // new point determined by the intersection of the other side of the
         // triangle and the plane, and the newly created point above
         out_tri2.vertices[0] = *inside_points[1];
+        out_tri2.texture[0] = *inside_tex[1];
+
         out_tri2.vertices[1] = out_tri1.vertices[2];
-        out_tri2.vertices[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[1], *outside_points[0]);
+        out_tri2.texture[1] = out_tri1.texture[2];
+
+        out_tri2.vertices[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[1], *outside_points[0], t);
+
+        out_tri2.texture[2].x = t * (outside_tex[0]->x - inside_tex[1]->x) + inside_tex[1]->x;
+        out_tri2.texture[2].y = t * (outside_tex[0]->y - inside_tex[1]->y) + inside_tex[1]->y;
+        out_tri2.texture[2].z = t * (outside_tex[0]->z - inside_tex[1]->z) + inside_tex[1]->z;
 
         return 2; // Return two newly formed triangles which form a quad
     }
