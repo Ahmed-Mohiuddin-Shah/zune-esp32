@@ -8,6 +8,66 @@ struct ZVec2
     float x, y;
     ZVec2(float x = 0, float y = 0)
         : x(x), y(y) {}
+
+    float normalize()
+    {
+        float length = getLength();
+        float invLength = 1.0f / length;
+
+        x *= invLength;
+        y *= invLength;
+
+        return length;
+    }
+
+    ZVec2 normalized()
+    {
+        float invLength = 1.0f / getLength();
+
+        return ZVec2(x * invLength, y * invLength);
+    }
+
+    float getLength()
+    {
+        return sqrt(x * x + y * y);
+    }
+
+    float dot(ZVec2 v)
+    {
+        return x * v.x + y * v.y;
+    }
+
+    float cross(ZVec2 v)
+    {
+        return y * v.x - x * v.y;
+    }
+
+    ZVec2 add(ZVec2 v)
+    {
+        return ZVec2(x + v.x, y + v.y);
+    }
+
+    ZVec2 sub(ZVec2 v)
+    {
+        return ZVec2(x - v.x, y - v.y);
+    }
+
+    // TODO Check Implementation again
+    ZVec2 div(ZVec2 v)
+    {
+        return ZVec2(x / v.x, y / v.y);
+    }
+
+    // TODO Check Implementation again
+    ZVec2 mul(ZVec2 v)
+    {
+        return ZVec2(x * v.x, y * v.y);
+    }
+
+    bool equals(ZVec2 v)
+    {
+        return x == v.x && y == v.y;
+    }
 };
 
 struct ZVec3
