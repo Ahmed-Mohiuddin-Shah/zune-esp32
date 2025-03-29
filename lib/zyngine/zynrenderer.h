@@ -84,6 +84,7 @@ public:
     void drawPixel(int x, int y, uint16_t color);
     void drawPoint(ZVertex v);
     void drawLine(int x1, int y1, int x2, int y2, uint16_t color);
+    void drawLine(ZVertex v0, ZVertex v1);
     void drawRect(int x, int y, int width, int height, uint16_t color);
     void fillRect(int x, int y, int width, int height, uint16_t color);
     void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
