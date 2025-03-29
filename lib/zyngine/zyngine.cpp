@@ -1,5 +1,4 @@
-#include "zyngine.h"
-#include "devicedrivers.h"
+#include <zyngine.h>
 
 bool Zyngine::initialize(int width, int height, int targetFPS)
 {
@@ -15,7 +14,7 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     targetFrameTime = 1.0f / (float)targetFPS;
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+#ifdef ZYNGINE_NATIVE_RAYLIB
     renderer = new ZynRenderer(screenWidth, screenHeight);
 #endif
 
@@ -36,8 +35,9 @@ void Zyngine::run()
     }
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    while(!WindowShouldClose()) {
+#ifdef ZYNGINE_NATIVE_RAYLIB
+    while (!WindowShouldClose())
+    {
         BeginDrawing();
         onUserUpdate(GetFrameTime());
         EndDrawing();
