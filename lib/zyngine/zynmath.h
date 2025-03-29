@@ -1,207 +1,111 @@
 #ifndef ZYNMATH_H
 #define ZYNMATH_H
 
-#include <config_user.h>
-#include <zyntexture.h>
+#include <math.h>
 
-
-// Check cross compatibility later
-#include <cmath>
-#include <iostream>
-
-#ifndef PI
-#define PI 3.14159265358979323846f
-#endif
-#ifndef DEG2RAD
-#define DEG2RAD (PI / 180.0f)
-#endif
-#ifndef RAD2DEG
-#define RAD2DEG (180.0f / PI)
-#endif
-
-#ifdef ZYNGINE_ESP32S3
-#include <Arduino.h>
-#include <FS.h>
-#include <SD.h>
-#include <SPI.h>
-#endif
-
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-
-#endif
-
-
-struct Vec2
+struct ZVec2
 {
-    float x;
-    float y;
-
-    Vec2(float x = 0.0f, float y = 0.0f) : x(x), y(y) {}
-
-    float normalize()
-    {
-        float length = getLength();
-        if (length != 0.0f)
-        {
-            float invLength = 1.0f / length;
-            x *= invLength;
-            y *= invLength;
-        }
-        return length;
-    }
-
-    Vec2 normalized() const
-    {
-        float invLength = 1.0f / getLength();
-        return Vec2(x * invLength, y * invLength);
-    }
-
-    float getLength() const
-    {
-        return std::sqrt(x * x + y * y);
-    }
-
-    float dot(const Vec2 &v) const
-    {
-        return x * v.x + y * v.y;
-    }
-
-    float cross(const Vec2 &v) const
-    {
-        return y * v.x - x * v.y;
-    }
-
-    Vec2 add(const Vec2 &v) const
-    {
-        return Vec2(x + v.x, y + v.y);
-    }
-
-    Vec2 sub(const Vec2 &v) const
-    {
-        return Vec2(x - v.x, y - v.y);
-    }
-
-    Vec2 div(float v) const
-    {
-        return Vec2(x / v, y / v);
-    }
-
-    Vec2 mul(float v) const
-    {
-        return Vec2(x * v, y * v);
-    }
-
-    bool equals(const Vec2 &v) const
-    {
-        return x == v.x && y == v.y;
-    }
-
-    // Operator overloads for more natural syntax
-    Vec2 operator+(const Vec2 &v) const { return add(v); }
-    Vec2 operator-(const Vec2 &v) const { return sub(v); }
-    Vec2 operator/(float v) const { return div(v); }
-    Vec2 operator*(float v) const { return mul(v); }
-    bool operator==(const Vec2 &v) const { return equals(v); }
-    bool operator!=(const Vec2 &v) const { return !equals(v); }
+    float x, y;
+    ZVec2(float x = 0, float y = 0)
+        : x(x), y(y) {}
 };
 
-struct Vec3
+struct ZVec3
 {
-    float x;
-    float y;
-    float z;
-
-    Vec3(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z) {}
+    float x, y, z;
+    ZVec3(float x = 0, float y = 0, float z = 0)
+        : x(x), y(y), z(z) {}
 
     float normalize()
     {
         float length = getLength();
-        if (length != 0.0f)
-        {
-            float invLength = 1.0f / length;
-            x *= invLength;
-            y *= invLength;
-            z *= invLength;
-        }
+        float invLength = 1.0f / length;
+
+        x *= invLength;
+        y *= invLength;
+        z *= invLength;
+
         return length;
     }
 
-    Vec3 normalized() const
+    ZVec3 normalized()
     {
         float invLength = 1.0f / getLength();
-        return Vec3(x * invLength, y * invLength, z * invLength);
+
+        return ZVec3(x, y, z);
     }
 
-    float getLength() const
+    float getLength()
     {
-        return std::sqrt(x * x + y * y + z * z);
+        return sqrt(x * x + y * y + z * z);
     }
 
-    float dot(const Vec3 &v) const
+    float dot(ZVec3 v)
     {
         return x * v.x + y * v.y + z * v.z;
     }
 
-    Vec3 cross(const Vec3 &v) const
+    ZVec3 cross(ZVec3 v)
     {
-        return Vec3(
+        return ZVec3(
             y * v.z - z * v.y,
             z * v.x - x * v.z,
             x * v.y - y * v.x);
     }
 
-    Vec3 add(const Vec3 &v) const
+    ZVec3 add(ZVec3 v)
     {
-        return Vec3(x + v.x, y + v.y, z + v.z);
+        return ZVec3(x + v.x, y + v.y, z + v.z);
     }
 
-    Vec3 sub(const Vec3 &v) const
+    ZVec3 sub(ZVec3 v)
     {
-        return Vec3(x - v.x, y - v.y, z - v.z);
+        return ZVec3(x - v.x, y - v.y, z - v.z);
     }
 
-    Vec3 div(float v) const
+    // TODO Verify Function Definition
+    ZVec3 div(ZVec3 v)
     {
-        return Vec3(x / v, y / v, z / v);
+        return ZVec3(x / v.x, y / v.y, z / v.z);
     }
 
-    Vec3 divXYZ(float x, float y, float z) const
+    ZVec3 divXYZ(float x, float y, float z)
     {
-        return Vec3(this->x / x, this->y / y, this->z / z);
+        return ZVec3(x / x, y / y, z / z);
     }
 
-    Vec3 mul(float v) const
+    // TODO Verify Function Definition
+    ZVec3 mul(ZVec3 v)
     {
-        return Vec3(x * v, y * v, z * v);
+        return ZVec3(x * v.x, y * v.y, z * v.z);
     }
 
-    Vec3 mulXYZ(float x, float y, float z) const
+    ZVec3 mulXYZ(float x, float y, float z)
     {
-        return Vec3(this->x * x, this->y * y, this->z * z);
+        return ZVec3(x * x, y * y, z * z);
     }
 
-    bool equals(const Vec3 &v) const
+    ZVec3 equals(ZVec3 v)
     {
         return x == v.x && y == v.y && z == v.z;
     }
-
-    // Operator overloads for more natural syntax
-    Vec3 operator+(const Vec3 &v) const { return add(v); }
-    Vec3 operator-(const Vec3 &v) const { return sub(v); }
-    Vec3 operator/(float v) const { return div(v); }
-    Vec3 operator*(float v) const { return mul(v); }
-    bool operator==(const Vec3 &v) const { return equals(v); }
-    bool operator!=(const Vec3 &v) const { return !equals(v); }
 };
 
-struct Mat4
+struct ZVec4
+{
+    float x, y, z, w;
+    ZVec4(float x = 0, float y = 0, float z = 0, float w = 0)
+        : x(x), y(y), z(z), w(w) {}
+};
+
+struct ZMat4
 {
     float m00, m01, m02, m03;
     float m10, m11, m12, m13;
     float m20, m21, m22, m23;
     float m30, m31, m32, m33;
 
-    Mat4()
+    ZMat4()
     {
         // Identity matrix by default
         m00 = 1;
@@ -222,10 +126,30 @@ struct Mat4
         m33 = 1;
     }
 
-    static Mat4 fromAxis(const Vec3 &vx, const Vec3 &vy, const Vec3 &vz)
+    void reset()
     {
-        Mat4 res;
+        // Identity matrix by default
+        m00 = 1;
+        m01 = 0;
+        m02 = 0;
+        m03 = 0;
+        m10 = 0;
+        m11 = 1;
+        m12 = 0;
+        m13 = 0;
+        m20 = 0;
+        m21 = 0;
+        m22 = 1;
+        m23 = 0;
+        m30 = 0;
+        m31 = 0;
+        m32 = 0;
+        m33 = 1;
+    }
 
+    ZMat4 fromAxis(ZVec3 vx, ZVec3 vy, ZVec3 vz)
+    {
+        ZMat4 res;
         res.m00 = vx.x;
         res.m01 = vy.x;
         res.m02 = vz.x;
@@ -239,10 +163,9 @@ struct Mat4
         return res;
     }
 
-    Mat4 mulMatrix(const Mat4 &right) const
+    ZMat4 mulMatrix(ZMat4 right)
     {
-        Mat4 res;
-
+        ZMat4 res;
         res.m00 = m00 * right.m00 + m01 * right.m10 + m02 * right.m20 + m03 * right.m30;
         res.m01 = m00 * right.m01 + m01 * right.m11 + m02 * right.m21 + m03 * right.m31;
         res.m02 = m00 * right.m02 + m01 * right.m12 + m02 * right.m22 + m03 * right.m32;
@@ -266,9 +189,9 @@ struct Mat4
         return res;
     }
 
-    Vec3 mulVector(const Vec3 &right, float w = 1.0f) const
+    ZVec3 mulVector(ZVec3 right, float w = 1.0f)
     {
-        Vec3 res;
+        ZVec3 res = ZVec3(0.0f, 0.0f, 0.0f);
 
         res.x = m00 * right.x + m01 * right.y + m02 * right.z + m03 * w;
         res.y = m10 * right.x + m11 * right.y + m12 * right.z + m13 * w;
@@ -277,69 +200,63 @@ struct Mat4
         return res;
     }
 
-    Mat4 scale(float x, float y, float z) const
+    ZMat4 scale(float x, float y = -1, float z = -1)
     {
-        Mat4 scaleMat;
-        scaleMat.m00 = x;
-        scaleMat.m11 = y;
-        scaleMat.m22 = z;
+        if (y == -1 && z == -1)
+        {
+            y = x;
+            z = x;
+        }
 
-        return this->mulMatrix(scaleMat);
+        ZMat4 scale;
+        scale.m00 = x;
+        scale.m11 = y;
+        scale.m22 = z;
+
+        return this->mulMatrix(scale);
     }
 
-    Mat4 scale(float uniformScale) const
+    ZMat4 rotate(float x, float y, float z)
     {
-        return this->scale(uniformScale, uniformScale, uniformScale);
+        float sinX = sin(x);
+        float cosX = cos(x);
+        float sinY = sin(y);
+        float cosY = cos(y);
+        float sinZ = sin(z);
+        float cosZ = cos(z);
+
+        ZMat4 res;
+
+        res.m00 = cosY * cosZ;
+        res.m01 = -cosY * sinZ;
+        res.m02 = sinY;
+        res.m03 = 0;
+        res.m10 = sinX * sinY * cosZ + cosX * sinZ;
+        res.m11 = -sinX * sinY * sinZ + cosX * cosZ;
+        res.m12 = -sinX * cosY;
+        res.m13 = 0;
+        res.m20 = -cosX * sinY * cosZ + sinX * sinZ;
+        res.m21 = cosX * sinY * sinZ + sinX * cosZ;
+        res.m22 = cosX * cosY;
+        res.m23 = 0;
+        res.m30 = 0;
+        res.m31 = 0;
+        res.m32 = 0;
+        res.m33 = 1;
+
+        return this->mulMatrix(res);
     }
 
-    Mat4 rotate(float x, float y, float z) const
+    ZMat4 translate(float x, float y, float z)
     {
-        const float sinX = std::sin(x);
-        const float cosX = std::cos(x);
-        const float sinY = std::sin(y);
-        const float cosY = std::cos(y);
-        const float sinZ = std::sin(z);
-        const float cosZ = std::cos(z);
+        ZMat4 res;
 
-        Mat4 rotation;
+        res.m03 = x;
+        res.m13 = y;
+        res.m23 = z;
 
-        rotation.m00 = cosY * cosZ;
-        rotation.m01 = -cosY * sinZ;
-        rotation.m02 = sinY;
-        rotation.m03 = 0;
-
-        rotation.m10 = sinX * sinY * cosZ + cosX * sinZ;
-        rotation.m11 = -sinX * sinY * sinZ + cosX * cosZ;
-        rotation.m12 = -sinX * cosY;
-        rotation.m13 = 0;
-
-        rotation.m20 = -cosX * sinY * cosZ + sinX * sinZ;
-        rotation.m21 = cosX * sinY * sinZ + sinX * cosZ;
-        rotation.m22 = cosX * cosY;
-        rotation.m23 = 0;
-
-        rotation.m30 = 0;
-        rotation.m31 = 0;
-        rotation.m32 = 0;
-        rotation.m33 = 1;
-
-        return this->mulMatrix(rotation);
+        return this->mulMatrix(res);
     }
-
-    Mat4 translate(float x, float y, float z) const
-    {
-        Mat4 translation;
-
-        translation.m03 = x;
-        translation.m13 = y;
-        translation.m23 = z;
-
-        return this->mulMatrix(translation);
-    }
-
-    // Operator overloads
-    Mat4 operator*(const Mat4 &right) const { return mulMatrix(right); }
-    Vec3 operator*(const Vec3 &right) const { return mulVector(right); }
 };
 
 #endif
