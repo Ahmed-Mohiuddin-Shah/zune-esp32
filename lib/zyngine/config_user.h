@@ -11,14 +11,14 @@
  *
  * @section Usage
  * - `#define ZYNGINE_ESP32S3`: Define this macro to target the ESP32-S3 platform.
- * - `#define ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER`: Define this macro to target the Windows platform with a custom software renderer using Raylib.
+ * - `#define ZYNGINE_NATIVE_RAYLIB`: Define this macro to target the Windows platform with a custom software renderer using Raylib.
  *
  * @note Ensure only the relevant target system macros are defined to avoid conflicts.
-*/
+ */
 
 // Ensure only One Target System is defined
 
 // #define ZYNGINE_ESP32S3
-#define ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+#define ZYNGINE_NATIVE_RAYLIB
 
 #endif // ZYNGINE_CONFIG_USER_H
