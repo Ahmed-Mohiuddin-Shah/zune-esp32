@@ -4,7 +4,10 @@
 #include <config_user.h>
 #include <zyntexture.h>
 
-#include <vector>
+
+// Check cross compatibility later
+#include <cmath>
+#include <iostream>
 
 #ifndef PI
 #define PI 3.14159265358979323846f
@@ -24,311 +27,319 @@
 #endif
 
 #ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-#include <cstdint>
-#include <cmath>
 
-#include <stdio.h>
-#include <dirent.h>
-#include <cstdio>
-#include <raylib/raymath.h>
-#include <sstream>
 #endif
 
-#ifdef ZYNGINE_ESP32S3
 
-struct Vector2
+struct Vec2
 {
     float x;
     float y;
-    // Constructor for easy initialization
-    Vector2(float x = 0, float y = 0)
-        : x(x), y(y) {}
-};
 
-struct Vector3
-{
-    float x = 0;
-    float y = 0;
-    float z = 1;
-    // Constructor for easy initialization
-    Vector2(float x = 0, float y = 0, float z = 1)
-        : x(x), y(y), z(z) {}
-};
+    Vec2(float x = 0.0f, float y = 0.0f) : x(x), y(y) {}
 
-struct Vector4
-{
-    float x = 0;
-    float y = 0;
-    float z = 0;
-    float w = 1;
-
-    // Constructor for easy initialization
-    Vector4(float x = 0, float y = 0, float z = 0, float w = 1)
-        : x(x), y(y), z(z), w(w) {}
-};
-#endif
-
-struct Matrix4
-{
-    float m[4][4] = {0};
-};
-
-void multiplyMatrixVector(Vector4 &i, Vector4 &o, Matrix4 &m);
-uint16_t RGB888ToRGB565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp = 1.0f);
-uint16_t RGBFloatToRGB565(float r, float g, float b);
-
-// In this example:
-
-// Ka represents ambient color.
-// Kd represents diffuse color.
-// Ks represents specular color.
-// Ns represents shininess.
-// d represents dissolve (transparency).
-// map_Kd specifies the diffuse texture map.
-struct ZynMaterial
-{
-    uint16_t Ka;
-    uint16_t Kd;
-    uint16_t Ks;
-    uint16_t Ns;
-    float d;
-    ZynTexture *texture;
-};
-struct Triangle
-{
-    Vector4 vertices[3];
-    Vector3 texture[3];
-    int materialIndex;
-    uint16_t color;
-
-
-};
-
-struct ZyngineMesh
-{
-    std::vector<Triangle> tris;
-    ZynMaterial materials[10];
-    ZynTexture textures[10];
-
-    bool loadFromObjectFile(const char *fileName, bool hasTexture = false)
+    float normalize()
     {
-        int materialIndex = -1;
-#ifdef ZYNGINE_ESP32S3
-        File file = SD.open(fileName);
-        if (!file)
+        float length = getLength();
+        if (length != 0.0f)
         {
-            Serial.println("Failed to open file for reading");
-            return false;
+            float invLength = 1.0f / length;
+            x *= invLength;
+            y *= invLength;
         }
-
-        std::vector<Vector4> vertices;
-
-        while (file.available())
-        {
-            char line[128];
-
-            // Clear the line buffer
-            for (int i = 0; i < sizeof(line); i++)
-            {
-                line[i] = '\0';
-            }
-
-            file.readBytesUntil('\n', line, sizeof(line) - 1);
-            if (line[0] == 'v')
-            {
-                Vector4 vertex;
-                sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-                // Serial.println(line);
-                vertices.push_back(vertex);
-            }
-            else if (line[0] == 'f')
-            {
-                Triangle triangle;
-                int v1, v2, v3;
-                sscanf(line, "f %d %d %d", &v1, &v2, &v3);
-                // Serial.println(line);
-
-                triangle.vertices[0] = vertices[v1 - 1];
-                triangle.vertices[1] = vertices[v2 - 1];
-                triangle.vertices[2] = vertices[v3 - 1];
-                tris.push_back(triangle);
-            }
-        }
-        file.close();
-        return true;
-#endif
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-
-        if (hasTexture)
-        {
-            std::string mtlFileName = std::string(fileName);
-            size_t lastdot = mtlFileName.find_last_of(".");
-            if (lastdot != std::string::npos)
-            {
-                mtlFileName = mtlFileName.substr(0, lastdot) + ".mtl";
-            }
-
-            FILE *file = fopen(mtlFileName.c_str(), "r");
-            if (!file)
-            {
-                printf("Failed to open file for reading\n");
-                return false;
-            }
-
-            while (!feof(file))
-            {
-                char line[128];
-
-                // Clear the line buffer
-                for (int i = 0; i < sizeof(line); i++)
-                {
-                    line[i] = '\0';
-                }
-
-                fgets(line, sizeof(line), file);
-
-                if (line[0] == 'n')
-                {
-                    materialIndex++;
-                    ZynMaterial mat;
-                    materials[materialIndex] = mat;
-                }
-                else if (line[0] == 'K')
-                {
-                    if (line[1] == 'a')
-                    {
-                        float r, g, b;
-                        sscanf(line, "Ka %f %f %f", &r, &g, &b);
-                        materials[materialIndex].Ka = RGBFloatToRGB565(r, g, b);
-                    }
-                    if (line[1] == 'd')
-                    {
-                        float r, g, b;
-                        sscanf(line, "Kd %f %f %f", &r, &g, &b);
-                        materials[materialIndex].Kd = RGBFloatToRGB565(r, g, b);
-                    }
-                    if (line[1] == 's')
-                    {
-                        float r, g, b;
-                        sscanf(line, "Kd %d", &r, &g, &b);
-                        materials[materialIndex].Ks = RGBFloatToRGB565(r, g, b);
-                    }
-                }
-                else if (line[0] == 'N')
-                {
-                    sscanf(line, "Ns %d", &materials[materialIndex].Ns);
-                }
-                else if (line[0] == 'd')
-                {
-                    sscanf(line, "d %f", &materials[materialIndex].d);
-                }
-                else if (line[0] == 'm')
-                {
-                    char name[30];
-                    sscanf(line, "map_Kd %s", &name);
-                    std::string imageFileName = std::string(name);
-                    size_t lastdot = imageFileName.find_last_of(".");
-                    if (lastdot != std::string::npos)
-                    {
-                        imageFileName = "./resources/optimized_assets/3d_models/" + imageFileName.substr(0, lastdot) + ".zyntex";
-                    }
-                    textures[materialIndex] = ZynTexture(name, imageFileName.c_str());
-                }
-            }
-            fclose(file);
-        }
-
-        // for (const auto &material : materials)
-        // {
-        //     printf("Material:\n");
-        //     printf("  Ka: %u\n", material.Ka);
-        //     printf("  Kd: %u\n", material.Kd);
-        //     printf("  Ks: %u\n", material.Ks);
-        //     printf("  Ns: %u\n", material.Ns);
-        //     printf("  d: %f\n", material.d);
-        //     if (material.texture)
-        //     {
-        //         printf("  Texture: %s\n", material.texture->name.c_str());
-        //     }
-        // }
-
-        FILE *file = fopen(fileName, "r");
-        if (!file)
-        {
-            printf("Failed to open file for reading\n");
-            return false;
-        }
-        std::vector<Vector4> vertices;
-        std::vector<Vector3> textures;
-        int currentTexture = -1;
-
-        while (!feof(file))
-        {
-            char line[128];
-
-            // Clear the line buffer
-            for (int i = 0; i < sizeof(line); i++)
-            {
-                line[i] = '\0';
-            }
-
-            fgets(line, sizeof(line), file);
-            if (line[0] == 'v')
-            {
-                if (line[1] == 't')
-                {
-                    Vector3 texture;
-                    sscanf(line, "vt %f %f", &texture.x, &texture.y);
-                    texture.z = 1.0f;
-                    textures.push_back(texture);
-                }
-                else
-                {
-                    Vector4 vertex;
-                    sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-                    vertex.w = 1.0f;
-                    vertices.push_back(vertex);
-                }
-            }
-            else if (line[0] == 'u')
-            {
-                currentTexture++;
-            }
-            else if (line[0] == 'f')
-            {
-                if (!hasTexture)
-                {
-                    Triangle triangle;
-                    int v1, v2, v3;
-                    sscanf(line, "f %d %d %d", &v1, &v2, &v3);
-
-                    triangle.vertices[0] = vertices[v1 - 1];
-                    triangle.vertices[1] = vertices[v2 - 1];
-                    triangle.vertices[2] = vertices[v3 - 1];
-                    tris.push_back(triangle);
-                }
-                else
-                {
-                    Triangle triangle;
-                    int v1, vt1, v2, vt2, v3, vt3;
-                    sscanf(line, "f %d/%d %d/%d %d/%d", &v1, &vt1, &v2, &vt2, &v3, &vt3);
-
-                    triangle.vertices[0] = vertices[v1 - 1];
-                    triangle.vertices[1] = vertices[v2 - 1];
-                    triangle.vertices[2] = vertices[v3 - 1];
-                    triangle.texture[0] = textures[vt1 - 1];
-                    triangle.texture[1] = textures[vt2 - 1];
-                    triangle.texture[2] = textures[vt3 - 1];
-                    triangle.materialIndex = currentTexture;
-
-                    tris.push_back(triangle);
-                }
-            }
-        }
-        fclose(file);
-        return true;
-#endif
+        return length;
     }
+
+    Vec2 normalized() const
+    {
+        float invLength = 1.0f / getLength();
+        return Vec2(x * invLength, y * invLength);
+    }
+
+    float getLength() const
+    {
+        return std::sqrt(x * x + y * y);
+    }
+
+    float dot(const Vec2 &v) const
+    {
+        return x * v.x + y * v.y;
+    }
+
+    float cross(const Vec2 &v) const
+    {
+        return y * v.x - x * v.y;
+    }
+
+    Vec2 add(const Vec2 &v) const
+    {
+        return Vec2(x + v.x, y + v.y);
+    }
+
+    Vec2 sub(const Vec2 &v) const
+    {
+        return Vec2(x - v.x, y - v.y);
+    }
+
+    Vec2 div(float v) const
+    {
+        return Vec2(x / v, y / v);
+    }
+
+    Vec2 mul(float v) const
+    {
+        return Vec2(x * v, y * v);
+    }
+
+    bool equals(const Vec2 &v) const
+    {
+        return x == v.x && y == v.y;
+    }
+
+    // Operator overloads for more natural syntax
+    Vec2 operator+(const Vec2 &v) const { return add(v); }
+    Vec2 operator-(const Vec2 &v) const { return sub(v); }
+    Vec2 operator/(float v) const { return div(v); }
+    Vec2 operator*(float v) const { return mul(v); }
+    bool operator==(const Vec2 &v) const { return equals(v); }
+    bool operator!=(const Vec2 &v) const { return !equals(v); }
+};
+
+struct Vec3
+{
+    float x;
+    float y;
+    float z;
+
+    Vec3(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z) {}
+
+    float normalize()
+    {
+        float length = getLength();
+        if (length != 0.0f)
+        {
+            float invLength = 1.0f / length;
+            x *= invLength;
+            y *= invLength;
+            z *= invLength;
+        }
+        return length;
+    }
+
+    Vec3 normalized() const
+    {
+        float invLength = 1.0f / getLength();
+        return Vec3(x * invLength, y * invLength, z * invLength);
+    }
+
+    float getLength() const
+    {
+        return std::sqrt(x * x + y * y + z * z);
+    }
+
+    float dot(const Vec3 &v) const
+    {
+        return x * v.x + y * v.y + z * v.z;
+    }
+
+    Vec3 cross(const Vec3 &v) const
+    {
+        return Vec3(
+            y * v.z - z * v.y,
+            z * v.x - x * v.z,
+            x * v.y - y * v.x);
+    }
+
+    Vec3 add(const Vec3 &v) const
+    {
+        return Vec3(x + v.x, y + v.y, z + v.z);
+    }
+
+    Vec3 sub(const Vec3 &v) const
+    {
+        return Vec3(x - v.x, y - v.y, z - v.z);
+    }
+
+    Vec3 div(float v) const
+    {
+        return Vec3(x / v, y / v, z / v);
+    }
+
+    Vec3 divXYZ(float x, float y, float z) const
+    {
+        return Vec3(this->x / x, this->y / y, this->z / z);
+    }
+
+    Vec3 mul(float v) const
+    {
+        return Vec3(x * v, y * v, z * v);
+    }
+
+    Vec3 mulXYZ(float x, float y, float z) const
+    {
+        return Vec3(this->x * x, this->y * y, this->z * z);
+    }
+
+    bool equals(const Vec3 &v) const
+    {
+        return x == v.x && y == v.y && z == v.z;
+    }
+
+    // Operator overloads for more natural syntax
+    Vec3 operator+(const Vec3 &v) const { return add(v); }
+    Vec3 operator-(const Vec3 &v) const { return sub(v); }
+    Vec3 operator/(float v) const { return div(v); }
+    Vec3 operator*(float v) const { return mul(v); }
+    bool operator==(const Vec3 &v) const { return equals(v); }
+    bool operator!=(const Vec3 &v) const { return !equals(v); }
+};
+
+struct Mat4
+{
+    float m00, m01, m02, m03;
+    float m10, m11, m12, m13;
+    float m20, m21, m22, m23;
+    float m30, m31, m32, m33;
+
+    Mat4()
+    {
+        // Identity matrix by default
+        m00 = 1;
+        m01 = 0;
+        m02 = 0;
+        m03 = 0;
+        m10 = 0;
+        m11 = 1;
+        m12 = 0;
+        m13 = 0;
+        m20 = 0;
+        m21 = 0;
+        m22 = 1;
+        m23 = 0;
+        m30 = 0;
+        m31 = 0;
+        m32 = 0;
+        m33 = 1;
+    }
+
+    static Mat4 fromAxis(const Vec3 &vx, const Vec3 &vy, const Vec3 &vz)
+    {
+        Mat4 res;
+
+        res.m00 = vx.x;
+        res.m01 = vy.x;
+        res.m02 = vz.x;
+        res.m10 = vx.y;
+        res.m11 = vy.y;
+        res.m12 = vz.y;
+        res.m20 = vx.z;
+        res.m21 = vy.z;
+        res.m22 = vz.z;
+
+        return res;
+    }
+
+    Mat4 mulMatrix(const Mat4 &right) const
+    {
+        Mat4 res;
+
+        res.m00 = m00 * right.m00 + m01 * right.m10 + m02 * right.m20 + m03 * right.m30;
+        res.m01 = m00 * right.m01 + m01 * right.m11 + m02 * right.m21 + m03 * right.m31;
+        res.m02 = m00 * right.m02 + m01 * right.m12 + m02 * right.m22 + m03 * right.m32;
+        res.m03 = m00 * right.m03 + m01 * right.m13 + m02 * right.m23 + m03 * right.m33;
+
+        res.m10 = m10 * right.m00 + m11 * right.m10 + m12 * right.m20 + m13 * right.m30;
+        res.m11 = m10 * right.m01 + m11 * right.m11 + m12 * right.m21 + m13 * right.m31;
+        res.m12 = m10 * right.m02 + m11 * right.m12 + m12 * right.m22 + m13 * right.m32;
+        res.m13 = m10 * right.m03 + m11 * right.m13 + m12 * right.m23 + m13 * right.m33;
+
+        res.m20 = m20 * right.m00 + m21 * right.m10 + m22 * right.m20 + m23 * right.m30;
+        res.m21 = m20 * right.m01 + m21 * right.m11 + m22 * right.m21 + m23 * right.m31;
+        res.m22 = m20 * right.m02 + m21 * right.m12 + m22 * right.m22 + m23 * right.m32;
+        res.m23 = m20 * right.m03 + m21 * right.m13 + m22 * right.m23 + m23 * right.m33;
+
+        res.m30 = m30 * right.m00 + m31 * right.m10 + m32 * right.m20 + m33 * right.m30;
+        res.m31 = m30 * right.m01 + m31 * right.m11 + m32 * right.m21 + m33 * right.m31;
+        res.m32 = m30 * right.m02 + m31 * right.m12 + m32 * right.m22 + m33 * right.m32;
+        res.m33 = m30 * right.m03 + m31 * right.m13 + m32 * right.m23 + m33 * right.m33;
+
+        return res;
+    }
+
+    Vec3 mulVector(const Vec3 &right, float w = 1.0f) const
+    {
+        Vec3 res;
+
+        res.x = m00 * right.x + m01 * right.y + m02 * right.z + m03 * w;
+        res.y = m10 * right.x + m11 * right.y + m12 * right.z + m13 * w;
+        res.z = m20 * right.x + m21 * right.y + m22 * right.z + m23 * w;
+
+        return res;
+    }
+
+    Mat4 scale(float x, float y, float z) const
+    {
+        Mat4 scaleMat;
+        scaleMat.m00 = x;
+        scaleMat.m11 = y;
+        scaleMat.m22 = z;
+
+        return this->mulMatrix(scaleMat);
+    }
+
+    Mat4 scale(float uniformScale) const
+    {
+        return this->scale(uniformScale, uniformScale, uniformScale);
+    }
+
+    Mat4 rotate(float x, float y, float z) const
+    {
+        const float sinX = std::sin(x);
+        const float cosX = std::cos(x);
+        const float sinY = std::sin(y);
+        const float cosY = std::cos(y);
+        const float sinZ = std::sin(z);
+        const float cosZ = std::cos(z);
+
+        Mat4 rotation;
+
+        rotation.m00 = cosY * cosZ;
+        rotation.m01 = -cosY * sinZ;
+        rotation.m02 = sinY;
+        rotation.m03 = 0;
+
+        rotation.m10 = sinX * sinY * cosZ + cosX * sinZ;
+        rotation.m11 = -sinX * sinY * sinZ + cosX * cosZ;
+        rotation.m12 = -sinX * cosY;
+        rotation.m13 = 0;
+
+        rotation.m20 = -cosX * sinY * cosZ + sinX * sinZ;
+        rotation.m21 = cosX * sinY * sinZ + sinX * cosZ;
+        rotation.m22 = cosX * cosY;
+        rotation.m23 = 0;
+
+        rotation.m30 = 0;
+        rotation.m31 = 0;
+        rotation.m32 = 0;
+        rotation.m33 = 1;
+
+        return this->mulMatrix(rotation);
+    }
+
+    Mat4 translate(float x, float y, float z) const
+    {
+        Mat4 translation;
+
+        translation.m03 = x;
+        translation.m13 = y;
+        translation.m23 = z;
+
+        return this->mulMatrix(translation);
+    }
+
+    // Operator overloads
+    Mat4 operator*(const Mat4 &right) const { return mulMatrix(right); }
+    Vec3 operator*(const Vec3 &right) const { return mulVector(right); }
 };
 
 #endif
