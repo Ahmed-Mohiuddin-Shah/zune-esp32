@@ -38,12 +38,71 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight)
     SetTargetFPS(60);
     this->screenWidth = screenWidth;
     this->screenHeight = screenHeight;
+    zDepthBufferLength = screenWidth * screenHeight;
+    zDepthBuffer = new float[zDepthBufferLength];
+
     this->frame = LoadRenderTexture(screenWidth, screenHeight);
 }
 #endif
 
+ZVec3 ZynRenderer::barycentricCoordinate(ZVec3 *pts, ZVec3 P)
+{
+    ZVec3 u = ZVec3(pts[2].x - pts[0].x, pts[1].x - pts[0].x, pts[0].x - P.x).cross(ZVec3(pts[2].y - pts[0].y, pts[1].y - pts[0].y, pts[0].y - P.y));
+    /* `pts` and `P` has integer value as coordinates
+       so `abs(u[2])` < 1 means `u[2]` is 0, that means
+       triangle is degenerate, in this case return something with negative coordinates */
+    if (std::abs(u.z) < 1)
+        return ZVec3(-1, 1, 1);
+    return ZVec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+}
+
+ZVec3 ZynRenderer::world2screen(ZVec3 v)
+{
+    return ZVec3(int((v.x + 1.) * screenWidth / 2. + .5), int((v.y + 1.) * screenHeight / 2. + .5), v.z);
+}
+
+void ZynRenderer::renderTriangle(ZVec3 *pts, uint16_t color)
+{
+    ZVec2 bboxmin(FLT_MAX, -FLT_MAX);
+    ZVec2 bboxmax(-FLT_MAX, FLT_MAX);
+    ZVec2 clamp(screenWidth - 1, screenHeight - 1);
+    for (int i = 0; i < 3; i++)
+    {
+        bboxmin.x = std::max(0.0f, std::min(bboxmin.x, pts[i].x));
+        bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
+        bboxmin.y = std::max(0.0f, std::min(bboxmin.y, pts[i].y));
+        bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
+    }
+    ZVec3 P;
+    for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+    {
+        for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+        {
+            ZVec3 bc_screen = barycentricCoordinate(pts, P);
+            if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                continue;
+            P.z = 0;
+            // for (int i = 0; i < 3; i++)
+            P.z += pts[0].z * bc_screen.x;
+            P.z += pts[1].z * bc_screen.y;
+            P.z += pts[2].z * bc_screen.z;
+            // image.set(P.x, P.y, color);
+
+            if (getZBuffer(P.x, P.y) < P.z)
+            {
+                setZBuffer(P.x, P.y, P.z);
+                drawPixel(P.x, P.y, color);
+            }
+        }
+    }
+}
+
 void ZynRenderer::clear(uint16_t color)
 {
+    for (int i = 0; i < zDepthBufferLength; i++)
+    {
+        zDepthBuffer[i] = -FLT_MAX;
+    }
 #ifdef ZYNGINE_ESP32S3
     // TODO
     currentFrame->clear();

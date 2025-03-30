@@ -5,6 +5,7 @@
 #include <zyncolor.h>
 #include <zynmath.h>
 #include <zynutils.h>
+#include <float.h>
 
 #ifdef ZYNGINE_ESP32S3
 #include <LovyanGFX.hpp>
@@ -20,6 +21,8 @@ class ZynRenderer
 private:
     int screenHeight;
     int screenWidth;
+    int zDepthBufferLength;
+    float *zDepthBuffer;
 
 #ifdef ZYNGINE_ESP32S3
     lgfx::LGFX_Device *lcd_display;
@@ -28,6 +31,27 @@ private:
 #endif
 #ifdef ZYNGINE_NATIVE_RAYLIB
 #endif
+
+    inline void setZBuffer(int x, int y, float f)
+    {
+        if (x * y >= zDepthBufferLength)
+        {
+            return;
+        }
+        zDepthBuffer[x + y * screenWidth] = f;
+    }
+    inline float getZBuffer(int x, int y)
+    {
+        if (x * y >= zDepthBufferLength)
+        {
+            return FLT_MAX;
+        }
+
+        // int x = idx % width;
+        // int y = idx / width;
+
+        return zDepthBuffer[x + y * screenWidth];
+    }
 
 public:
 #ifdef ZYNGINE_NATIVE_RAYLIB
@@ -38,6 +62,9 @@ public:
     ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *lcd_display);
     void diffDraw();
 #endif
+    ZVec3 barycentricCoordinate(ZVec3 *pts, ZVec3 P);
+    ZVec3 world2screen(ZVec3 v);
+    void renderTriangle(ZVec3 *pts, uint16_t color);
     void clear(uint16_t clearColor);
     void printText(int x, int y, const char *text, uint16_t backgroundColor, uint16_t textColor);
     void renderPixel(ZVec3 p, ZVec3 c);
