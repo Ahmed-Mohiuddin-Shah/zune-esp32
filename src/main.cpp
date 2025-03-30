@@ -1,24 +1,31 @@
 #include <zyngine.h>
 #include <zynmesh.h>
 #include <zynlight.h>
+#include <zyntexture.h>
 #include <vector>
 
 class Test : public Zyngine
 {
 private:
     ZMesh model;
+    ZynTexture texture;
     ZynLight light;
 
 public:
     void onUserCreate() override
     {
         model.loadFromObjectFile("./resources/optimized_assets/3d_models/african_head.obj");
+        texture.loadFromFile("./resources/optimized_assets/3d_models/textures/african_head_diffuse.zyntex");
         light;
     }
 
     void onUserUpdate(float deltaTime) override
     {
         renderer->clear(ZYN_BLACK);
+
+        for (int i=0; i < texture.bufferLength; i++) {
+            DrawPixel(i % ZYNTEX_RESOLUTION, i / ZYNTEX_RESOLUTION, getRaylibColorFromRGB565(texture.getPixel(i % ZYNTEX_RESOLUTION, i / ZYNTEX_RESOLUTION)));
+        }
 
         for (int i = 0; i < model.tris.size(); i++)
         {
@@ -37,30 +44,6 @@ public:
                 renderer->renderTriangle(pts, getIntensityRGB565(intensity, ZYN_WHITE));
             }
         }
-
-        // for (int i = 0; i < model.tris.size(); i++)
-        // {
-        //     ZTriangle triangle = model.tris[i];
-        //     ZVec2i screen_coords[3];
-        //     ZVec3 world_coords[3];
-        //     for (int j = 0; j < 3; j++)
-        //     {
-        //         ZVec3 v = triangle.v[j];
-        //         screen_coords[j] = ZVec2i((v.x + 1.) * screenWidth / 2., (v.y + 1.) * screenHeight / 2.);
-        //         world_coords[j] = v;
-        //     }
-
-        //     ZVec3 n = (world_coords[2].sub(world_coords[0])).cross(world_coords[1].sub(world_coords[0]));
-
-        //     n.normalize();
-        //     // TODO check dot function
-        //     float intensity = light_dir.dot(n);
-
-        //     if (intensity > 0)
-        //     {
-        //         renderer->renderTriangle(screen_coords, getIntensityRGB565(intensity, ZYN_WHITE));
-        //     }
-        // }
 
         // renderer->drawTriangle(12, 12, 40, 40, 30, 30, rand() % 65535);
     }
