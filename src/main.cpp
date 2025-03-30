@@ -23,8 +23,6 @@ public:
     {
         renderer->clear(ZYN_BLACK);
 
-        renderer->drawTexture(texture, 20, 20);
-
         for (int i = 0; i < model.tris.size(); i++)
         {
             ZTriangle triangle = model.tris[i];
@@ -39,7 +37,7 @@ public:
 
             if (intensity > 0)
             {
-                renderer->renderTriangle(pts, getIntensityRGB565(intensity, ZYN_WHITE));
+                renderer->renderTexturedTriangle(pts, triangle.t, intensity,&texture);
             }
         }
 

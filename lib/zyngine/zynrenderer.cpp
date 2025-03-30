@@ -97,6 +97,48 @@ void ZynRenderer::renderTriangle(ZVec3 *pts, uint16_t color)
     }
 }
 
+void ZynRenderer::renderTexturedTriangle(ZVec3 *pts, ZVec2 *tpts, float intensity, ZynTexture *texture)
+{
+    ZVec2 bboxmin(FLT_MAX, -FLT_MAX);
+    ZVec2 bboxmax(-FLT_MAX, FLT_MAX);
+    ZVec2 clamp(screenWidth - 1, screenHeight - 1);
+    for (int i = 0; i < 3; i++)
+    {
+        bboxmin.x = std::max(0.0f, std::min(bboxmin.x, pts[i].x));
+        bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
+        bboxmin.y = std::max(0.0f, std::min(bboxmin.y, pts[i].y));
+        bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
+    }
+    ZVec3 P;
+    for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+    {
+        for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+        {
+            ZVec3 bc_screen = barycentricCoordinate(pts, P);
+            if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                continue;
+            P.z = 0;
+            P.z += pts[0].z * bc_screen.x;
+            P.z += pts[1].z * bc_screen.y;
+            P.z += pts[2].z * bc_screen.z;
+
+            if (getZBuffer(P.x, P.y) < P.z)
+            {
+                setZBuffer(P.x, P.y, P.z);
+
+                // Calculate barycentric coordinates for texture mapping
+                float u = tpts[0].x * bc_screen.x + tpts[1].x * bc_screen.y + tpts[2].x * bc_screen.z;
+                float v = tpts[0].y * bc_screen.x + tpts[1].y * bc_screen.y + tpts[2].y * bc_screen.z;
+
+                // Get the color from the texture using the texture coordinates
+                uint16_t texColor = texture->getPixel(u * ZYNTEX_RESOLUTION, v * ZYNTEX_RESOLUTION);
+
+                drawPixel(P.x, P.y, getIntensityRGB565(intensity, texColor));
+            }
+        }
+    }
+}
+
 void ZynRenderer::clear(uint16_t color)
 {
     for (int i = 0; i < zDepthBufferLength; i++)

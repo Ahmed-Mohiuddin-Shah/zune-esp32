@@ -6,7 +6,10 @@
 
 inline Color getRaylibColorFromRGB565(uint16_t color)
 {
-    return {(color >> 11) * 255 / 31, (color >> 5 & 0x3F) * 255 / 63, (color & 0x1F) * 255 / 31, 255};
+    return {static_cast<unsigned char>((color >> 11) * 255 / 31), 
+            static_cast<unsigned char>((color >> 5 & 0x3F) * 255 / 63), 
+            static_cast<unsigned char>((color & 0x1F) * 255 / 31), 
+            255};
 }
 
 inline uint16_t getIntensityRGB565(float intensity, uint16_t color) {
