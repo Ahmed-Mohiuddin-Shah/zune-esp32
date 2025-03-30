@@ -4,6 +4,13 @@
 #include <config_user.h>
 #include <math.h>
 
+struct ZVec2i
+{
+    int x, y;
+
+    ZVec2i(int x = 0, int y = 0) : x(x), y(y) {}
+};
+
 struct ZVec2
 {
     float x, y;
@@ -69,15 +76,19 @@ struct ZVec2
     {
         return x == v.x && y == v.y;
     }
+
+    ZVec2i toVec2i()
+    {
+        return ZVec2i(x, y);
+    }
 };
 
-struct ZVec2i
+struct ZVec3i
 {
-    int x, y;
-
-    ZVec2i(int x = 0, int y = 0) : x(x), y(y) {}
+    int x, y, z;
+    ZVec3i(int x = 0, int y = 0, int z = 0)
+        : x(x), y(y), z(z) {}
 };
-
 struct ZVec3
 {
     float x, y, z;
@@ -156,6 +167,11 @@ struct ZVec3
     ZVec3 equals(ZVec3 v)
     {
         return x == v.x && y == v.y && z == v.z;
+    }
+
+    ZVec3i toZVec3i()
+    {
+        return ZVec3i(x, y, z);
     }
 };
 
