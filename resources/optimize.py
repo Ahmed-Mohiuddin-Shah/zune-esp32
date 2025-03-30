@@ -46,6 +46,6 @@ def process_images(input_folder, output_folder):
             save_as_zyntex(output_path, width, height, rgb565_data)
 
 if __name__ == "__main__":
-    input_folder = './original_assets/3d_models'
-    output_folder = './optimized_assets/3d_models'
+    input_folder = './original_assets/3d_models/textures'
+    output_folder = './optimized_assets/3d_models/textures'
     process_images(input_folder, output_folder)
