@@ -1,5 +1,4 @@
-#include "zyngine.h"
-#include "devicedrivers.h"
+#include <zyngine.h>
 
 bool Zyngine::initialize(int width, int height, int targetFPS)
 {
@@ -7,6 +6,7 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     // Example: Set up the renderer, input, etc.
     screenWidth = width;
     screenHeight = height;
+    onUserCreate();
 
 #ifdef ZYNGINE_ESP32S3
     renderer = new ZynRenderer(screenWidth, screenHeight, new ParallelILI9486());
@@ -14,11 +14,10 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     targetFrameTime = 1.0f / (float)targetFPS;
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+#ifdef ZYNGINE_NATIVE_RAYLIB
     renderer = new ZynRenderer(screenWidth, screenHeight);
 #endif
 
-    onUserCreate();
     return true;
 }
 
@@ -36,10 +35,20 @@ void Zyngine::run()
     }
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    while(!WindowShouldClose()) {
-        BeginDrawing();
+#ifdef ZYNGINE_NATIVE_RAYLIB
+    while (!WindowShouldClose())
+    {
+
+        BeginTextureMode(renderer->frame);
         onUserUpdate(GetFrameTime());
+        EndTextureMode();
+
+        BeginDrawing();
+        DrawTexturePro(
+            renderer->frame.texture,
+            {0, 0, (float)renderer->frame.texture.width, (float)(renderer->frame.texture.height)},
+            {0, 0, (float)renderer->frame.texture.width, (float)renderer->frame.texture.height},
+            {0, 0}, 0.0f, WHITE);
         EndDrawing();
     }
 #endif

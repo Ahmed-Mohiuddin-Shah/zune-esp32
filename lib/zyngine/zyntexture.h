@@ -1,51 +1,80 @@
 #ifndef ZYNTEXTURE_H
 #define ZYNTEXTURE_H
 
-#include <cstdint> // For uint32_t
-#include <string>  // For texture file paths
-#include <vector>  // For storing pixel data
+#include <cstdint>
+#include <stdio.h>
+#include <config_user.h>
+#include "zyncolor.h"
 
 struct ZynTexture
 {
-    int width;                    // Width of the texture
-    int height;                   // Height of the texture
-    std::vector<uint32_t> pixels; // Pixel data (RGBA format, 32-bit per pixel)
+    uint16_t pixels[ZYNTEX_RESOLUTION * ZYNTEX_RESOLUTION];
+    int bufferLength = ZYNTEX_RESOLUTION * ZYNTEX_RESOLUTION;
 
-    // Optional metadata
-    std::string name;     // Name of the texture (for debugging/identification)
-    bool hasTransparency; // Indicates if the texture has transparency
-
-    // Constructor
-    ZynTexture(int w = 0, int h = 0, const std::string &texName = "")
-        : width(w), height(h), name(texName), hasTransparency(false)
+    bool
+    loadFromFile(const char *fileName)
     {
-        pixels.resize(width * height, 0x00000000); // Initialize with transparent black
-    }
+        FILE *file = fopen(fileName, "r");
 
-    // Get pixel at (x, y)
-    uint32_t GetPixel(int x, int y) const
-    {
-        if (x >= 0 && x < width && y >= 0 && y < height)
+        if (!file)
         {
-            return pixels[y * width + x];
+            printf("Failed to open file for reading\n");
+            return false;
         }
-        return 0x00000000; // Return transparent black if out of bounds
-    }
 
-    // Set pixel at (x, y)
-    void SetPixel(int x, int y, uint32_t color)
-    {
-        if (x >= 0 && x < width && y >= 0 && y < height)
+        char line[10];
+        int x, y, bufferIndex = 0;
+        uint16_t color;
+
+        // clear the line buffer
+        for (int i = 0; i < 10; i++)
         {
-            pixels[y * width + x] = color;
+            line[i] = '\0';
+        }
+
+        fgets(line, sizeof(line), file);
+        sscanf(line, "%d %d", &x, &y);
+        if (x != y && x != ZYNTEX_RESOLUTION)
+        {
+            printf("Invalid .zyntex resolution\n");
+            return false;
+        }
+
+        while (!feof(file))
+        {
+            fgets(line, sizeof(line), file);
+            sscanf(line, "%u", &color);
+            pixels[bufferIndex] = color;
+            bufferIndex++;
+        }
+        fclose(file);
+        return true;
+    }
+
+    uint16_t getPixel(int x, int y)
+    {
+        if (x >= 0 && x < ZYNTEX_RESOLUTION && y >= 0 && y < ZYNTEX_RESOLUTION)
+        {
+            return pixels[y * ZYNTEX_RESOLUTION + x];
+        }
+        return 0x0000; // Return transparent black if out of bounds
+    }
+
+    void setPixel(int x, int y, uint16_t color)
+    {
+        if (x >= 0 && x < ZYNTEX_RESOLUTION && y >= 0 && y < ZYNTEX_RESOLUTION)
+        {
+            pixels[y * ZYNTEX_RESOLUTION + x] = color;
         }
     }
 
-    // Clear the texture with a specific color
-    void Clear(uint32_t color = 0x00000000)
+    void clear(uint16_t color = ZYN_BLACK)
     {
-        std::fill(pixels.begin(), pixels.end(), color);
+        for (int i = 0; i < bufferLength; i++)
+        {
+            pixels[i] = color;
+        }
     }
 };
 
-#endif // ZYNTEXTURE_H
+#endif

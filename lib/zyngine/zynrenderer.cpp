@@ -1,4 +1,7 @@
 #include "ZynRenderer.h"
+#include <algorithm>
+#include <iostream>
+#include <vector>
 
 #ifdef ZYNGINE_ESP32S3
 ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *lcd_display)
@@ -28,23 +31,126 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *l
     // previousFrame->setRotation(0); // No need to set rotation for sprite
 }
 #endif
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+#ifdef ZYNGINE_NATIVE_RAYLIB
 ZynRenderer::ZynRenderer(int screenWidth, int screenHeight)
 {
     InitWindow(screenWidth, screenHeight, "Zyngine");
     SetTargetFPS(60);
     this->screenWidth = screenWidth;
     this->screenHeight = screenHeight;
+    zDepthBufferLength = screenWidth * screenHeight;
+    zDepthBuffer = new float[zDepthBufferLength];
+
+    this->frame = LoadRenderTexture(screenWidth, screenHeight);
 }
 #endif
 
-void ZynRenderer::clear()
+ZVec3 ZynRenderer::barycentricCoordinate(ZVec3 *pts, ZVec3 P)
 {
+    ZVec3 u = ZVec3(pts[2].x - pts[0].x, pts[1].x - pts[0].x, pts[0].x - P.x).cross(ZVec3(pts[2].y - pts[0].y, pts[1].y - pts[0].y, pts[0].y - P.y));
+    /* `pts` and `P` has integer value as coordinates
+       so `abs(u[2])` < 1 means `u[2]` is 0, that means
+       triangle is degenerate, in this case return something with negative coordinates */
+    if (std::abs(u.z) < 1)
+        return ZVec3(-1, 1, 1);
+    return ZVec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
+}
+
+ZVec3 ZynRenderer::world2screen(ZVec3 v)
+{
+    return ZVec3(int((v.x + 1.) * screenWidth / 2. + .5), int((v.y + 1.) * screenHeight / 2. + .5), v.z);
+}
+
+void ZynRenderer::renderTriangle(ZVec3 *pts, uint16_t color)
+{
+    ZVec2 bboxmin(FLT_MAX, -FLT_MAX);
+    ZVec2 bboxmax(-FLT_MAX, FLT_MAX);
+    ZVec2 clamp(screenWidth - 1, screenHeight - 1);
+    for (int i = 0; i < 3; i++)
+    {
+        bboxmin.x = std::max(0.0f, std::min(bboxmin.x, pts[i].x));
+        bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
+        bboxmin.y = std::max(0.0f, std::min(bboxmin.y, pts[i].y));
+        bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
+    }
+    ZVec3 P;
+    for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+    {
+        for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+        {
+            ZVec3 bc_screen = barycentricCoordinate(pts, P);
+            if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                continue;
+            P.z = 0;
+            // for (int i = 0; i < 3; i++)
+            P.z += pts[0].z * bc_screen.x;
+            P.z += pts[1].z * bc_screen.y;
+            P.z += pts[2].z * bc_screen.z;
+            // image.set(P.x, P.y, color);
+
+            if (getZBuffer(P.x, P.y) < P.z)
+            {
+                setZBuffer(P.x, P.y, P.z);
+                drawPixel(P.x, P.y, color);
+            }
+        }
+    }
+}
+
+void ZynRenderer::renderTexturedTriangle(ZVec3 *pts, ZVec2 *tpts, float intensity, ZynTexture *texture)
+{
+    ZVec2 bboxmin(FLT_MAX, -FLT_MAX);
+    ZVec2 bboxmax(-FLT_MAX, FLT_MAX);
+    ZVec2 clamp(screenWidth - 1, screenHeight - 1);
+    for (int i = 0; i < 3; i++)
+    {
+        bboxmin.x = std::max(0.0f, std::min(bboxmin.x, pts[i].x));
+        bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
+        bboxmin.y = std::max(0.0f, std::min(bboxmin.y, pts[i].y));
+        bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
+    }
+    ZVec3 P;
+    for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+    {
+        for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+        {
+            ZVec3 bc_screen = barycentricCoordinate(pts, P);
+            if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+                continue;
+            P.z = 0;
+            P.z += pts[0].z * bc_screen.x;
+            P.z += pts[1].z * bc_screen.y;
+            P.z += pts[2].z * bc_screen.z;
+
+            if (getZBuffer(P.x, P.y) < P.z)
+            {
+                setZBuffer(P.x, P.y, P.z);
+
+                // Calculate barycentric coordinates for texture mapping
+                float u = tpts[0].x * bc_screen.x + tpts[1].x * bc_screen.y + tpts[2].x * bc_screen.z;
+                float v = tpts[0].y * bc_screen.x + tpts[1].y * bc_screen.y + tpts[2].y * bc_screen.z;
+
+                // Get the color from the texture using the texture coordinates
+                uint16_t texColor = texture->getPixel(u * ZYNTEX_RESOLUTION, v * ZYNTEX_RESOLUTION);
+
+                drawPixel(P.x, P.y, getIntensityRGB565(intensity, texColor));
+            }
+        }
+    }
+}
+
+void ZynRenderer::clear(uint16_t color)
+{
+    for (int i = 0; i < zDepthBufferLength; i++)
+    {
+        zDepthBuffer[i] = -FLT_MAX;
+    }
 #ifdef ZYNGINE_ESP32S3
+    // TODO
     currentFrame->clear();
 #endif
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    ClearBackground(BLACK);
+#ifdef ZYNGINE_NATIVE_RAYLIB
+    ClearBackground(getRaylibColorFromRGB565(color));
 #endif
 }
 
@@ -57,7 +163,7 @@ void ZynRenderer::printText(int x, int y, const char *text, uint16_t backgroundC
     currentFrame->print(text);
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+#ifdef ZYNGINE_NATIVE_RAYLIB
     DrawText(text, x, y, 20, WHITE);
 #endif
 }
@@ -68,14 +174,8 @@ void ZynRenderer::drawPixel(int x, int y, uint16_t color)
     currentFrame->drawPixel(x, y, color);
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    // Convert 16-bit color to Raylib Color
-    Color raylibColor = {
-        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
-        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
-        (unsigned char)(color & 0x1F) * 255 / 31,
-        255};
-    DrawPixel(x, y, raylibColor);
+#ifdef ZYNGINE_NATIVE_RAYLIB
+    DrawPixel(x, y, getRaylibColorFromRGB565(color));
 #endif
 }
 
@@ -85,15 +185,9 @@ void ZynRenderer::drawLine(int x1, int y1, int x2, int y2, uint16_t color)
     currentFrame->drawLine(x1, y2, x2, y2, color);
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    // Convert 16-bit color to Raylib Color
-    Color raylibColor = {
-        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
-        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
-        (unsigned char)(color & 0x1F) * 255 / 31,
-        255};
+#ifdef ZYNGINE_NATIVE_RAYLIB
 
-    DrawLine(x1, y1, x2, y2, raylibColor);
+    DrawLine(x1, y1, x2, y2, getRaylibColorFromRGB565(color));
 #endif
 }
 
@@ -103,15 +197,9 @@ void ZynRenderer::drawRect(int x, int y, int width, int height, uint16_t color)
     currentFrame->drawRect(x, y, width, height, color);
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    // Convert 16-bit color to Raylib Color
-    Color raylibColor = {
-        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
-        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
-        (unsigned char)(color & 0x1F) * 255 / 31,
-        255};
+#ifdef ZYNGINE_NATIVE_RAYLIB
 
-    DrawRectangleLines(x, y, width, height, raylibColor);
+    DrawRectangleLines(x, y, width, height, getRaylibColorFromRGB565(color));
 #endif
 }
 
@@ -121,15 +209,9 @@ void ZynRenderer::fillRect(int x, int y, int width, int height, uint16_t color)
     currentFrame->fillRect(x, y, width, height, color);
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    // Convert 16-bit color to Raylib Color
-    Color raylibColor = {
-        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
-        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
-        (unsigned char)(color & 0x1F) * 255 / 31,
-        255};
+#ifdef ZYNGINE_NATIVE_RAYLIB
 
-    DrawRectangle(x, y, width, height, raylibColor);
+    DrawRectangle(x, y, width, height, getRaylibColorFromRGB565(color));
 #endif
 }
 
@@ -139,15 +221,9 @@ void ZynRenderer::drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, u
     currentFrame->drawTriangle(x1, y1, x2, y2, x3, y3, color);
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    // Convert 16-bit color to Raylib Color
-    Color raylibColor = {
-        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
-        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
-        (unsigned char)(color & 0x1F) * 255 / 31,
-        255};
+#ifdef ZYNGINE_NATIVE_RAYLIB
 
-    DrawTriangleLines({(float)x1, (float)y1}, {(float)x2, (float)y2}, {(float)x3, (float)y3}, raylibColor);
+    DrawTriangleLines({(float)x1, (float)y1}, {(float)x2, (float)y2}, {(float)x3, (float)y3}, getRaylibColorFromRGB565(color));
 #endif
 }
 
@@ -157,24 +233,20 @@ void ZynRenderer::fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, u
     currentFrame->fillTriangle(x1, y1, x2, y2, x3, y3, color);
 #endif
 
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-    // Convert 16-bit color to Raylib Color
-    Color raylibColor = {
-        (unsigned char)((color >> 11) & 0x1F) * 255 / 31,
-        (unsigned char)((color >> 5) & 0x3F) * 255 / 63,
-        (unsigned char)(color & 0x1F) * 255 / 31,
-        255};
+#ifdef ZYNGINE_NATIVE_RAYLIB
 
-    DrawTriangle({(float)x1, (float)y1}, {(float)x2, (float)y2}, {(float)x3, (float)y3}, raylibColor);
+    DrawTriangle({(float)x1, (float)y1}, {(float)x2, (float)y2}, {(float)x3, (float)y3}, getRaylibColorFromRGB565(color));
 #endif
 }
 
-void ZynRenderer::drawTexture(int x, int y, ZynTexture *texture)
+void ZynRenderer::drawTexture(ZynTexture texture, int x, int y)
 {
-#ifdef ZYNGINE_ESP32S3
-    Serial.println("TODO: Implement DrawTexture Function");
-    // currentFrame->drawBitmap(x, y, texture->getWidth(), texture->getHeight(), texture->getBuffer());
-#endif
+    for (int i = 0; i < texture.bufferLength; i++)
+    {
+        int xp = i % ZYNTEX_RESOLUTION;
+        int yp = i / ZYNTEX_RESOLUTION;
+        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(i % ZYNTEX_RESOLUTION, i / ZYNTEX_RESOLUTION)));
+    }
 }
 
 #ifdef ZYNGINE_ESP32S3

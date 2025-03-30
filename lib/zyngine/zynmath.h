@@ -2,166 +2,334 @@
 #define ZYNMATH_H
 
 #include <config_user.h>
+#include <math.h>
 
-#include <vector>
-
-#ifndef PI
-#define PI 3.14159265358979323846f
-#endif
-#ifndef DEG2RAD
-#define DEG2RAD (PI / 180.0f)
-#endif
-#ifndef RAD2DEG
-#define RAD2DEG (180.0f / PI)
-#endif
-
-#ifdef ZYNGINE_ESP32S3
-#include <Arduino.h>
-#include <FS.h>
-#include <SD.h>
-#include <SPI.h>
-#endif
-
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
-#include <cstdint>
-#include <cmath>
-
-#include <stdio.h>
-#include <dirent.h>
-#include <cstdio>
-#include <raylib/raymath.h>
-#endif
-
-#ifdef ZYNGINE_ESP32S3
-struct Vector2
+struct ZVec2
 {
-    float x;
-    float y;
-    // Constructor for easy initialization
-    Vector2(float x = 0, float y = 0)
+    float x, y;
+    ZVec2(float x = 0, float y = 0)
         : x(x), y(y) {}
-};
 
-struct Vector4
-{
-    float x = 0;
-    float y = 0;
-    float z = 0;
-    float w = 1;
-
-    // Constructor for easy initialization
-    Vector4(float x = 0, float y = 0, float z = 0, float w = 1)
-        : x(x), y(y), z(z), w(w) {}
-};
-#endif
-
-struct Triangle
-{
-    Vector4 vertices[3];
-    uint16_t color;
-};
-
-struct ZyngineMesh
-{
-    std::vector<Triangle> tris;
-
-    bool loadFromObjectFile(const char *fileName)
+    float normalize()
     {
-#ifdef ZYNGINE_ESP32S3
-        File file = SD.open(fileName);
-        if (!file)
-        {
-            Serial.println("Failed to open file for reading");
-            return false;
-        }
+        float length = getLength();
+        float invLength = 1.0f / length;
 
-        std::vector<Vector4> vertices;
+        x *= invLength;
+        y *= invLength;
 
-        while (file.available())
-        {
-            char line[128];
+        return length;
+    }
 
-            // Clear the line buffer
-            for (int i = 0; i < sizeof(line); i++)
-            {
-                line[i] = '\0';
-            }
+    ZVec2 normalized()
+    {
+        float invLength = 1.0f / getLength();
 
-            file.readBytesUntil('\n', line, sizeof(line) - 1);
-            if (line[0] == 'v')
-            {
-                Vector4 vertex;
-                sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-                // Serial.println(line);
-                vertices.push_back(vertex);
-            }
-            else if (line[0] == 'f')
-            {
-                Triangle triangle;
-                int v1, v2, v3;
-                sscanf(line, "f %d %d %d", &v1, &v2, &v3);
-                // Serial.println(line);
+        return ZVec2(x * invLength, y * invLength);
+    }
 
-                triangle.vertices[0] = vertices[v1 - 1];
-                triangle.vertices[1] = vertices[v2 - 1];
-                triangle.vertices[2] = vertices[v3 - 1];
-                tris.push_back(triangle);
-            }
-        }
-        file.close();
-        return true;
-#endif
-#ifdef ZYNGINE_WINDOWS_NATIVE_RAYLIB_CUSTOM_SOFTWARE_RENDERER
+    float getLength()
+    {
+        return sqrt(x * x + y * y);
+    }
 
-        FILE *file = fopen(fileName, "r");
-        if (!file)
-        {
-            printf("Failed to open file for reading\n");
-            return false;
-        }
-        std::vector<Vector4> vertices;
+    float dot(ZVec2 v)
+    {
+        return x * v.x + y * v.y;
+    }
 
-        while (!feof(file))
-        {
-            char line[128];
+    float cross(ZVec2 v)
+    {
+        return y * v.x - x * v.y;
+    }
 
-            // Clear the line buffer
-            for (int i = 0; i < sizeof(line); i++)
-            {
-                line[i] = '\0';
-            }
+    ZVec2 add(ZVec2 v)
+    {
+        return ZVec2(x + v.x, y + v.y);
+    }
 
-            fgets(line, sizeof(line), file);
-            if (line[0] == 'v')
-            {
-                Vector4 vertex;
-                sscanf(line, "v %f %f %f", &vertex.x, &vertex.y, &vertex.z);
-                vertices.push_back(vertex);
-            }
-            else if (line[0] == 'f')
-            {
-                Triangle triangle;
-                int v1, v2, v3;
-                sscanf(line, "f %d %d %d", &v1, &v2, &v3);
+    ZVec2 sub(ZVec2 v)
+    {
+        return ZVec2(x - v.x, y - v.y);
+    }
 
-                triangle.vertices[0] = vertices[v1 - 1];
-                triangle.vertices[1] = vertices[v2 - 1];
-                triangle.vertices[2] = vertices[v3 - 1];
-                tris.push_back(triangle);
-            }
-        }
-        fclose(file);
-        return true;
-#endif
+    // TODO Check Implementation again
+    ZVec2 div(ZVec2 v)
+    {
+        return ZVec2(x / v.x, y / v.y);
+    }
+
+    // TODO Check Implementation again
+    ZVec2 mul(ZVec2 v)
+    {
+        return ZVec2(x * v.x, y * v.y);
+    }
+
+    bool equals(ZVec2 v)
+    {
+        return x == v.x && y == v.y;
     }
 };
 
-struct Matrix4
+struct ZVec2i
 {
-    float m[4][4] = {0};
+    int x, y;
+
+    ZVec2i(int x = 0, int y = 0) : x(x), y(y) {}
 };
 
-void multiplyMatrixVector(Vector4 &i, Vector4 &o, Matrix4 &m);
-uint16_t RGB888ToRGB565(uint8_t red8, uint8_t green8, uint8_t blue8, float dp = 1.0f);
+struct ZVec3
+{
+    float x, y, z;
+    ZVec3(float x = 0, float y = 0, float z = 0)
+        : x(x), y(y), z(z) {}
+
+    float normalize()
+    {
+        float length = getLength();
+        float invLength = 1.0f / length;
+
+        x *= invLength;
+        y *= invLength;
+        z *= invLength;
+
+        return length;
+    }
+
+    ZVec3 normalized()
+    {
+        float invLength = 1.0f / getLength();
+
+        return ZVec3(x, y, z);
+    }
+
+    float getLength()
+    {
+        return sqrt(x * x + y * y + z * z);
+    }
+
+    float dot(ZVec3 v)
+    {
+        return x * v.x + y * v.y + z * v.z;
+    }
+
+    ZVec3 cross(ZVec3 v)
+    {
+        return ZVec3(
+            y * v.z - z * v.y,
+            z * v.x - x * v.z,
+            x * v.y - y * v.x);
+    }
+
+    ZVec3 add(ZVec3 v)
+    {
+        return ZVec3(x + v.x, y + v.y, z + v.z);
+    }
+
+    ZVec3 sub(ZVec3 v)
+    {
+        return ZVec3(x - v.x, y - v.y, z - v.z);
+    }
+
+    // TODO Verify Function Definition
+    ZVec3 div(ZVec3 v)
+    {
+        return ZVec3(x / v.x, y / v.y, z / v.z);
+    }
+
+    ZVec3 divXYZ(float x, float y, float z)
+    {
+        return ZVec3(x / x, y / y, z / z);
+    }
+
+    // TODO Verify Function Definition
+    ZVec3 mul(ZVec3 v)
+    {
+        return ZVec3(x * v.x, y * v.y, z * v.z);
+    }
+
+    ZVec3 mulXYZ(float x, float y, float z)
+    {
+        return ZVec3(x * x, y * y, z * z);
+    }
+
+    ZVec3 equals(ZVec3 v)
+    {
+        return x == v.x && y == v.y && z == v.z;
+    }
+};
+
+struct ZTriangle
+{
+    ZVec3 v[3];
+    ZVec2 t[3];
+};
+struct ZVec4
+{
+    float x, y, z, w;
+    ZVec4(float x = 0, float y = 0, float z = 0, float w = 0)
+        : x(x), y(y), z(z), w(w) {}
+};
+
+struct ZMat4
+{
+    float m00, m01, m02, m03;
+    float m10, m11, m12, m13;
+    float m20, m21, m22, m23;
+    float m30, m31, m32, m33;
+
+    ZMat4()
+    {
+        // Identity matrix by default
+        m00 = 1;
+        m01 = 0;
+        m02 = 0;
+        m03 = 0;
+        m10 = 0;
+        m11 = 1;
+        m12 = 0;
+        m13 = 0;
+        m20 = 0;
+        m21 = 0;
+        m22 = 1;
+        m23 = 0;
+        m30 = 0;
+        m31 = 0;
+        m32 = 0;
+        m33 = 1;
+    }
+
+    void reset()
+    {
+        // Identity matrix by default
+        m00 = 1;
+        m01 = 0;
+        m02 = 0;
+        m03 = 0;
+        m10 = 0;
+        m11 = 1;
+        m12 = 0;
+        m13 = 0;
+        m20 = 0;
+        m21 = 0;
+        m22 = 1;
+        m23 = 0;
+        m30 = 0;
+        m31 = 0;
+        m32 = 0;
+        m33 = 1;
+    }
+
+    ZMat4 fromAxis(ZVec3 vx, ZVec3 vy, ZVec3 vz)
+    {
+        ZMat4 res;
+        res.m00 = vx.x;
+        res.m01 = vy.x;
+        res.m02 = vz.x;
+        res.m10 = vx.y;
+        res.m11 = vy.y;
+        res.m12 = vz.y;
+        res.m20 = vx.z;
+        res.m21 = vy.z;
+        res.m22 = vz.z;
+
+        return res;
+    }
+
+    ZMat4 mulMatrix(ZMat4 right)
+    {
+        ZMat4 res;
+        res.m00 = m00 * right.m00 + m01 * right.m10 + m02 * right.m20 + m03 * right.m30;
+        res.m01 = m00 * right.m01 + m01 * right.m11 + m02 * right.m21 + m03 * right.m31;
+        res.m02 = m00 * right.m02 + m01 * right.m12 + m02 * right.m22 + m03 * right.m32;
+        res.m03 = m00 * right.m03 + m01 * right.m13 + m02 * right.m23 + m03 * right.m33;
+
+        res.m10 = m10 * right.m00 + m11 * right.m10 + m12 * right.m20 + m13 * right.m30;
+        res.m11 = m10 * right.m01 + m11 * right.m11 + m12 * right.m21 + m13 * right.m31;
+        res.m12 = m10 * right.m02 + m11 * right.m12 + m12 * right.m22 + m13 * right.m32;
+        res.m13 = m10 * right.m03 + m11 * right.m13 + m12 * right.m23 + m13 * right.m33;
+
+        res.m20 = m20 * right.m00 + m21 * right.m10 + m22 * right.m20 + m23 * right.m30;
+        res.m21 = m20 * right.m01 + m21 * right.m11 + m22 * right.m21 + m23 * right.m31;
+        res.m22 = m20 * right.m02 + m21 * right.m12 + m22 * right.m22 + m23 * right.m32;
+        res.m23 = m20 * right.m03 + m21 * right.m13 + m22 * right.m23 + m23 * right.m33;
+
+        res.m30 = m30 * right.m00 + m31 * right.m10 + m32 * right.m20 + m33 * right.m30;
+        res.m31 = m30 * right.m01 + m31 * right.m11 + m32 * right.m21 + m33 * right.m31;
+        res.m32 = m30 * right.m02 + m31 * right.m12 + m32 * right.m22 + m33 * right.m32;
+        res.m33 = m30 * right.m03 + m31 * right.m13 + m32 * right.m23 + m33 * right.m33;
+
+        return res;
+    }
+
+    ZVec3 mulVector(ZVec3 right, float w = 1.0f)
+    {
+        ZVec3 res = ZVec3(0.0f, 0.0f, 0.0f);
+
+        res.x = m00 * right.x + m01 * right.y + m02 * right.z + m03 * w;
+        res.y = m10 * right.x + m11 * right.y + m12 * right.z + m13 * w;
+        res.z = m20 * right.x + m21 * right.y + m22 * right.z + m23 * w;
+
+        return res;
+    }
+
+    ZMat4 scale(float x, float y = -1, float z = -1)
+    {
+        if (y == -1 && z == -1)
+        {
+            y = x;
+            z = x;
+        }
+
+        ZMat4 scale;
+        scale.m00 = x;
+        scale.m11 = y;
+        scale.m22 = z;
+
+        return this->mulMatrix(scale);
+    }
+
+    ZMat4 rotate(float x, float y, float z)
+    {
+        float sinX = sin(x);
+        float cosX = cos(x);
+        float sinY = sin(y);
+        float cosY = cos(y);
+        float sinZ = sin(z);
+        float cosZ = cos(z);
+
+        ZMat4 res;
+
+        res.m00 = cosY * cosZ;
+        res.m01 = -cosY * sinZ;
+        res.m02 = sinY;
+        res.m03 = 0;
+        res.m10 = sinX * sinY * cosZ + cosX * sinZ;
+        res.m11 = -sinX * sinY * sinZ + cosX * cosZ;
+        res.m12 = -sinX * cosY;
+        res.m13 = 0;
+        res.m20 = -cosX * sinY * cosZ + sinX * sinZ;
+        res.m21 = cosX * sinY * sinZ + sinX * cosZ;
+        res.m22 = cosX * cosY;
+        res.m23 = 0;
+        res.m30 = 0;
+        res.m31 = 0;
+        res.m32 = 0;
+        res.m33 = 1;
+
+        return this->mulMatrix(res);
+    }
+
+    ZMat4 translate(float x, float y, float z)
+    {
+        ZMat4 res;
+
+        res.m03 = x;
+        res.m13 = y;
+        res.m23 = z;
+
+        return this->mulMatrix(res);
+    }
+};
 
 #endif
