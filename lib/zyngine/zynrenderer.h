@@ -27,11 +27,11 @@ private:
     LGFX_Sprite *currentFrame;
 #endif
 #ifdef ZYNGINE_NATIVE_RAYLIB
-
 #endif
 
 public:
 #ifdef ZYNGINE_NATIVE_RAYLIB
+    RenderTexture2D frame;
     ZynRenderer(int screenWidth, int screenHeight);
 #endif
 #ifdef ZYNGINE_ESP32S3

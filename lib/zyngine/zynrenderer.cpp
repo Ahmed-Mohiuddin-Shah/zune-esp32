@@ -38,6 +38,7 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight)
     SetTargetFPS(60);
     this->screenWidth = screenWidth;
     this->screenHeight = screenHeight;
+    this->frame = LoadRenderTexture(screenWidth, screenHeight);
 }
 #endif
 
