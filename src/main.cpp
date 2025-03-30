@@ -1,6 +1,7 @@
 #include <zyngine.h>
 #include <zynmesh.h>
 #include <zynlight.h>
+#include <zyncamera.h>
 #include <zyntexture.h>
 #include <vector>
 
@@ -10,13 +11,19 @@ private:
     ZMesh model;
     ZynTexture texture;
     ZynLight light;
+    ZynCamera camera;
+    ZMat4 projection;
+    ZMat4 viewPort;
 
 public:
     void onUserCreate() override
     {
+
+        viewPort.toViewport(screenWidth / 8, screenHeight / 8, screenWidth * 3 / 4, screenHeight * 3 / 4, 255);
+        projection.m32 = -1.0f / camera.c.z;
+        
         model.loadFromObjectFile("./resources/optimized_assets/3d_models/african_head.obj");
         texture.loadFromFile("./resources/optimized_assets/3d_models/textures/african_head_diffuse.zyntex");
-        light;
     }
 
     void onUserUpdate(float deltaTime) override
@@ -37,7 +44,7 @@ public:
 
             if (intensity > 0)
             {
-                renderer->renderTexturedTriangle(pts, triangle.t, intensity,&texture);
+                renderer->renderTexturedTriangle(pts, triangle.t, intensity, &texture);
             }
         }
 

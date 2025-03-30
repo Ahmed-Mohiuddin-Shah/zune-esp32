@@ -330,6 +330,17 @@ struct ZMat4
 
         return this->mulMatrix(res);
     }
+
+    void toViewport(int x, int y, int w, int h, int depth)
+    {
+        m03 = x + w / 2.0f;
+        m13 = y + h / 2.0f;
+        m23 = depth / 2.0f;
+
+        m00 = w / 2.0f;
+        m11 = h / 2.0f;
+        m22 = depth / 2.0f;
+    }
 };
 
 #endif
