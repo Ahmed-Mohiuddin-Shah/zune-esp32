@@ -6,6 +6,7 @@ class Test : public Zyngine
 {
 private:
     ZMesh model;
+    ZVec3 light_dir;
 
 public:
     ZVec3 barycentric(ZVec2i *pts, ZVec2i P)
@@ -49,37 +50,35 @@ public:
     void onUserCreate() override
     {
         model.loadFromObjectFile("./resources/optimized_assets/3d_models/african_head.obj");
+        light_dir = ZVec3(0, 0, -1);
     }
 
     void onUserUpdate(float deltaTime) override
     {
         renderer->clear(ZYN_BLACK);
 
-        // for (int i = 0; i < model.tris.size(); i++)
-        // {
-        //     ZTriangle triangle = model.tris[i];
-        //     for (int j = 0; j < 3; j++)
-        //     {
-        //         ZVec3 v0 = triangle.v[j];
-        //         ZVec3 v1 = triangle.v[(j + 1) % 3];
-        //         int x0 = (v0.x + 1.) * screenWidth / 2.;
-        //         int y0 = (v0.y + 1.) * screenHeight / 2.;
-        //         int x1 = (v1.x + 1.) * screenWidth / 2.;
-        //         int y1 = (v1.y + 1.) * screenHeight / 2.;
-        //         renderer->drawLine(x0, y0, x1, y1, ZYN_WHITE);
-        //     }
-        // }
-
         for (int i = 0; i < model.tris.size(); i++)
         {
             ZTriangle triangle = model.tris[i];
             ZVec2i screen_coords[3];
+            ZVec3 world_coords[3];
             for (int j = 0; j < 3; j++)
             {
-                ZVec3 world_coords = triangle.v[j];
-                screen_coords[j] = ZVec2i((world_coords.x + 1.) * screenWidth / 2., (world_coords.y + 1.) * screenHeight / 2.);
+                ZVec3 v = triangle.v[j];
+                screen_coords[j] = ZVec2i((v.x + 1.) * screenWidth / 2., (v.y + 1.) * screenHeight / 2.);
+                world_coords[j] = v;
             }
-            this->triangle(screen_coords, rand() % 65535);
+
+            ZVec3 n = (world_coords[2].sub(world_coords[0])).cross(world_coords[1].sub(world_coords[0]));
+
+            n.normalize();
+            // TODO check dot function
+            float intensity = light_dir.dot(n);
+
+            if (intensity > 0)
+            {
+                this->triangle(screen_coords, getIntensityRGB565(intensity, ZYN_WHITE));
+            }
         }
 
         renderer->drawTriangle(12, 12, 40, 40, 30, 30, rand() % 65535);
@@ -90,6 +89,6 @@ Test engine;
 
 int main()
 {
-    if (engine.initialize(800, 600, 60))
+    if (engine.initialize(320, 480, 60))
         engine.run();
 }
