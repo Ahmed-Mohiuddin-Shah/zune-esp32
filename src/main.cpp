@@ -23,9 +23,7 @@ public:
     {
         renderer->clear(ZYN_BLACK);
 
-        for (int i=0; i < texture.bufferLength; i++) {
-            DrawPixel(i % ZYNTEX_RESOLUTION, i / ZYNTEX_RESOLUTION, getRaylibColorFromRGB565(texture.getPixel(i % ZYNTEX_RESOLUTION, i / ZYNTEX_RESOLUTION)));
-        }
+        renderer->drawTexture(texture, 20, 20);
 
         for (int i = 0; i < model.tris.size(); i++)
         {

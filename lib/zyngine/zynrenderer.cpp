@@ -197,6 +197,16 @@ void ZynRenderer::fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, u
 #endif
 }
 
+void ZynRenderer::drawTexture(ZynTexture texture, int x, int y)
+{
+    for (int i = 0; i < texture.bufferLength; i++)
+    {
+        int xp = i % ZYNTEX_RESOLUTION;
+        int yp = i / ZYNTEX_RESOLUTION;
+        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(i % ZYNTEX_RESOLUTION, i / ZYNTEX_RESOLUTION)));
+    }
+}
+
 #ifdef ZYNGINE_ESP32S3
 void ZynRenderer::diffDraw()
 {

@@ -5,6 +5,7 @@
 #include <zyncolor.h>
 #include <zynmath.h>
 #include <zynutils.h>
+#include <zyntexture.h>
 #include <float.h>
 
 #ifdef ZYNGINE_ESP32S3
@@ -74,6 +75,7 @@ public:
     void fillRect(int x, int y, int width, int height, uint16_t color);
     void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
     void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
+    void drawTexture(ZynTexture texture, int x, int y); // TODO chack to see is alpha value possible
 };
 
 #endif
