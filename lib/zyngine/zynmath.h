@@ -1,6 +1,7 @@
 #ifndef ZYNMATH_H
 #define ZYNMATH_H
 
+#include <config_user.h>
 #include <math.h>
 
 struct ZVec2
@@ -68,6 +69,13 @@ struct ZVec2
     {
         return x == v.x && y == v.y;
     }
+};
+
+struct ZVec2i
+{
+    int x, y;
+
+    ZVec2i(int x = 0, int y = 0) : x(x), y(y) {}
 };
 
 struct ZVec3
@@ -151,6 +159,11 @@ struct ZVec3
     }
 };
 
+struct ZTriangle
+{
+    ZVec3 v[3];
+    ZVec2 t[3];
+};
 struct ZVec4
 {
     float x, y, z, w;
