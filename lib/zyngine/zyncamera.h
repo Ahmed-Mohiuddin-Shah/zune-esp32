@@ -9,14 +9,14 @@ struct ZynCamera
     ZVec3 eye;
     ZVec3 up;
 
-    ZynCamera() : center(ZVec3(0.0f, 0.0f, 0.0f)), eye(ZVec3(1.0f, 1.0f, 3.0f)), up(ZVec3(0.0f, 1.0f, 0.0f)) {}
+    ZynCamera() : center(ZVec3(2.0f, 2.0f, -2.0f)), eye(ZVec3(1.0f, 1.0f, 3.0f)), up(ZVec3(0.0f, 1.0f, 0.0f)) {}
 
     ZMat4 getLookAtMatrix()
     {
         ZMat4 m;
-        ZVec3 z = (eye.sub(center)).normalize();
-        ZVec3 x = (up.cross(z)).normalize();
-        ZVec3 y = (z.cross(x)).normalize();
+        ZVec3 z = (eye.sub(center)).normalized();
+        ZVec3 x = (up.cross(z)).normalized();
+        ZVec3 y = (z.cross(x)).normalized();
 
         m.m00 = x.x;
         m.m10 = y.x;
