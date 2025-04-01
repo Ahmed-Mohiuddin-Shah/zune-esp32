@@ -193,6 +193,11 @@ struct ZVec4
 
     ZVec4(ZVec3 v) : x(v.x), y(v.y), z(v.z), w(1.0f) {}
 
+    ZVec3 toZVec3()
+    {
+        return ZVec3(x / w, y / w, z / w);
+    }
+
     ZVec3 toZVec3(ZVec4 v)
     {
         return ZVec3(v.x / v.w, v.y / v.w, v.z / v.w);
@@ -299,6 +304,18 @@ struct ZMat4
         res.x = m00 * right.x + m01 * right.y + m02 * right.z + m03 * w;
         res.y = m10 * right.x + m11 * right.y + m12 * right.z + m13 * w;
         res.z = m20 * right.x + m21 * right.y + m22 * right.z + m23 * w;
+
+        return res;
+    }
+
+    ZVec4 mulVector(ZVec4 right)
+    {
+        ZVec4 res = ZVec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+        res.x = m00 * right.x + m01 * right.y + m02 * right.z + m03 * right.w;
+        res.y = m10 * right.x + m11 * right.y + m12 * right.z + m13 * right.w;
+        res.z = m20 * right.x + m21 * right.y + m22 * right.z + m23 * right.w;
+        res.w = m30 * right.x + m31 * right.y + m32 * right.z + m33 * right.w;
 
         return res;
     }
