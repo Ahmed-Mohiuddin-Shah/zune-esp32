@@ -22,7 +22,7 @@ private:
 public:
     void onUserCreate() override
     {
-
+        lightFixed.l = ZVec3(-1.0f, -1.0f, 0.0f);
         modelViewMatrix = camera.getLookAtMatrix();
         projectionMatrix;
         viewPortMatrix.toViewport(screenWidth / 8, screenHeight / 8, screenWidth * 3 / 4, screenHeight * 3 / 4, depth);
@@ -34,6 +34,29 @@ public:
 
     void onUserUpdate(float deltaTime) override
     {
+
+        // Handle keyboard input for model movement
+        ZVec3 translation(0.0f, 0.0f, 0.0f);
+        float moveSpeed = 5.0f * deltaTime;
+
+        if (IsKeyDown(KEY_W))
+            translation.y += moveSpeed; // Move up
+        if (IsKeyDown(KEY_S))
+            translation.y -= moveSpeed; // Move down
+        if (IsKeyDown(KEY_A))
+            translation.x -= moveSpeed; // Move left
+        if (IsKeyDown(KEY_D))
+            translation.x += moveSpeed; // Move right
+        if (IsKeyDown(KEY_Q))
+            translation.z -= moveSpeed; // Move forward
+        if (IsKeyDown(KEY_E))
+            translation.z += moveSpeed; // Move backward
+
+        // Update the translation matrix
+        translationMat = translationMat.translate(translation.x, translation.y, translation.z);
+
+        // Update the model-view matrix with the translation
+        ZMat4 modelMatrix = translationMat;
 
         light.l = light.l.normalized();
         // Display the position of the light on the screen
@@ -51,9 +74,11 @@ public:
             for (int j = 0; j < 3; j++)
             {
                 ZVec4 v(triangle.v[j]);
-                ZVec3 n = triangle.n[j];
+                v = translationMat.mulVector(v);
+                ZVec3 n = translationMat.mulVector(triangle.n[j]).normalized();
                 screenCoords[j] = (viewPortMatrix.mulVector(projectionMatrix.mulVector(modelViewMatrix.mulVector(v)))).toZVec3().toZVec3i();
                 worldCoords[j] = triangle.v[j];
+
                 intensities[j] += light.getIntensityAtNorm(n);
                 intensities[j] += lightFixed.getIntensityAtNorm(n);
             }
