@@ -72,6 +72,11 @@ struct ZVec2
         return ZVec2(x * v.x, y * v.y);
     }
 
+    ZVec2 mul(float f)
+    {
+        return ZVec2(x * f, y * f);
+    }
+
     bool equals(ZVec2 v)
     {
         return x == v.x && y == v.y;
@@ -159,9 +164,9 @@ struct ZVec3
         return ZVec3(x * v.x, y * v.y, z * v.z);
     }
 
-    ZVec3 mulXYZ(float x, float y, float z)
+    ZVec3 mul(float f)
     {
-        return ZVec3(x * x, y * y, z * z);
+        return ZVec3(x * f, y * f, z * f);
     }
 
     ZVec3 equals(ZVec3 v)
@@ -185,7 +190,16 @@ struct ZVec4
     float x, y, z, w;
     ZVec4(float x = 0, float y = 0, float z = 0, float w = 0)
         : x(x), y(y), z(z), w(w) {}
+
+    ZVec4(ZVec3 v) : x(v.x), y(v.y), z(v.z), w(1.0f) {}
+
+    ZVec3 toZVec3(ZVec4 v)
+    {
+        return ZVec3(v.x / v.w, v.y / v.w, v.z / v.w);
+    }
 };
+
+typedef ZVec4 Quaternion;
 
 struct ZMat4
 {
