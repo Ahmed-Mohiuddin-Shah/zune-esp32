@@ -5,9 +5,11 @@
 
 struct ZynCamera
 {
-    ZVec3 c;
+    ZVec3 position;
+    ZVec3 eye;
+    ZVec3 center;
 
-    ZynCamera(float x = 0.0f, float y = 0.0f, float z = 3.0f) : c(ZVec3(x, y, z)) {}
+    ZynCamera() : position(ZVec3(0.0f, 0.0f, 3.0f)), eye(ZVec3(1.0f, 1.0f, 3.0f)), center(ZVec3(0.0f, 0.0f, 0.0f)) {}
 };
 
 #endif

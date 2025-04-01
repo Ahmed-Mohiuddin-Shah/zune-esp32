@@ -14,14 +14,15 @@ private:
     ZynCamera camera;
     ZMat4 projection;
     ZMat4 viewPort;
+    int depth = 255;
 
 public:
     void onUserCreate() override
     {
 
-        viewPort.toViewport(screenWidth / 8, screenHeight / 8, screenWidth * 3 / 4, screenHeight * 3 / 4, 255);
-        projection.m32 = -1.0f / camera.c.z;
-        
+        viewPort.toViewport(screenWidth / 8, screenHeight / 8, screenWidth * 3 / 4, screenHeight * 3 / 4, depth);
+        projection.m32 = -1.0f / camera.position.z;
+
         model.loadFromObjectFile("./resources/optimized_assets/3d_models/african_head.obj");
         texture.loadFromFile("./resources/optimized_assets/3d_models/textures/african_head_diffuse.zyntex");
     }
@@ -33,18 +34,22 @@ public:
         for (int i = 0; i < model.tris.size(); i++)
         {
             ZTriangle triangle = model.tris[i];
-            ZVec3 pts[3];
+            ZVec3i screenCoords[3];
+            ZVec3 worldCoords[3];
 
             for (int j = 0; j < 3; j++)
             {
-                pts[j] = renderer->world2screen(triangle.v[j]);
+                ZVec4 v(triangle.v[j]);
+                screenCoords[j] = (viewPort.mulVector(projection.mulVector(v))).toZVec3().toZVec3i();
+                worldCoords[j] = triangle.v[j];
             }
 
             float intensity = light.getIntensityAtTriangle(triangle);
 
             if (intensity > 0)
             {
-                renderer->renderTexturedTriangle(pts, triangle.t, intensity, &texture);
+                // renderer->renderTriangle(pts, getIntensityRGB565(intensity, ZYN_WHITE));
+                renderer->renderTexturedTriangle(screenCoords, triangle.t, intensity, &texture);
             }
         }
 

@@ -62,9 +62,9 @@ struct ZMesh
                 triangle.v[0] = vertices[v1 - 1];
                 triangle.v[1] = vertices[v2 - 1];
                 triangle.v[2] = vertices[v3 - 1];
-                triangle.t[0] = texCoords[vt1 - 1];
-                triangle.t[1] = texCoords[vt2 - 1];
-                triangle.t[2] = texCoords[vt3 - 1];
+                triangle.t[0] = ((texCoords[vt1 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
+                triangle.t[1] = ((texCoords[vt2 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
+                triangle.t[2] = ((texCoords[vt3 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
                 // TODO add vn too
 
                 tris.push_back(triangle);
