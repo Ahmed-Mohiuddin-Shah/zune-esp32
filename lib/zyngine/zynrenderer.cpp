@@ -139,7 +139,7 @@ void ZynRenderer::renderTriangle(ZVec3 *pts, uint16_t color)
 //     }
 // }
 
-void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float intensity, ZynTexture *texture)
+void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *intensities, ZynTexture *texture)
 {
     if (pts[0].y == pts[1].y && pts[0].y == pts[2].y)
         return; // i dont care about degenerate triangles
@@ -147,16 +147,19 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float intens
     {
         std::swap(pts[0], pts[1]);
         std::swap(tpts[0], tpts[1]);
+        std::swap(intensities[0], intensities[1]);
     }
     if (pts[0].y > pts[2].y)
     {
         std::swap(pts[0], pts[2]);
         std::swap(tpts[0], tpts[2]);
+        std::swap(intensities[0], intensities[2]);
     }
     if (pts[1].y > pts[2].y)
     {
         std::swap(pts[1], pts[2]);
         std::swap(tpts[1], tpts[2]);
+        std::swap(intensities[1], intensities[2]);
     }
 
     int total_height = pts[2].y - pts[0].y;
@@ -171,11 +174,14 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float intens
         ZVec3i B = second_half ? pts[1].add((ZVec3(pts[2].sub(pts[1])).mul(beta)).toZVec3i()) : pts[0].add((ZVec3(pts[1].sub(pts[0])).mul(beta)).toZVec3i());
         ZVec2i uvA = tpts[0].add((tpts[2].sub(tpts[0])).mul(alpha));
         ZVec2i uvB = second_half ? tpts[1].add((tpts[2].sub(tpts[1])).mul(beta)) : tpts[0].add((tpts[1].sub(tpts[0])).mul(beta));
+        float ityA = intensities[0] + (intensities[2] - intensities[0]) * alpha;
+        float ityB = second_half ? intensities[1] + (intensities[2] - intensities[1]) * beta : intensities[0] + (intensities[1] - intensities[0]) * beta;
 
         if (A.x > B.x)
         {
             std::swap(A, B);
             std::swap(uvA, uvB);
+            std::swap(ityA, ityB);
         }
 
         for (int j = A.x; j <= B.x; j++)
@@ -183,13 +189,29 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float intens
             float phi = B.x == A.x ? 1. : (float)(j - A.x) / (float)(B.x - A.x);
             ZVec3i P = (ZVec3(A).add(ZVec3(B.sub(A)).mul(phi))).toZVec3i();
             ZVec2i uvP = uvA.add((uvB.sub(uvA)).mul(phi));
+            float ityP = ityA + (ityB - ityA) * phi;
+            ityP = std::clamp(ityP, 0.1f, 1.0f);
+            // printf("%f", ityP);
 
+            // int idx = P.x + P.y * screenWidth;
+            if (P.x >= screenWidth || P.y >= screenHeight || P.x < 0 || P.y < 0)
+                continue;
             if (getZBuffer(P.x, P.y) < P.z)
             {
                 setZBuffer(P.x, P.y, P.z);
-                drawPixel(P.x, P.y, getIntensityRGB565(intensity, texture->getPixel(uvP.x, uvP.y)));
+                drawPixel(P.x, P.y, getIntensityRGB565(ityP, texture->getPixel(uvP.x, uvP.y)));
             }
         }
+    }
+    // printf("}\n");
+}
+
+void ZynRenderer::renderSphere(ZVec3 pos, uint16_t color)
+{
+    if (getZBuffer(pos.x, pos.y) < pos.z)
+    {
+        setZBuffer(pos.x, pos.y, pos.z);
+        drawPixel(pos.x, pos.y, color);
     }
 }
 

@@ -302,6 +302,7 @@ struct ZTriangle
 {
     ZVec3 v[3];
     ZVec2i t[3];
+    ZVec3 n[3];
 };
 struct ZVec4
 {
