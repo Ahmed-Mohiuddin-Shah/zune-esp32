@@ -35,36 +35,6 @@ public:
     void onUserUpdate(float deltaTime) override
     {
 
-        float cameraSpeed = 5.0f * deltaTime;
-
-        // Move up (Q) and down (E)
-        if (IsKeyDown(KEY_Q))
-        {
-            light.l = light.l.add(ZVec3(0, 0, -cameraSpeed));
-        }
-        if (IsKeyDown(KEY_E))
-        {
-            light.l = light.l.add(ZVec3(0, 0, cameraSpeed));
-        }
-
-        if (IsKeyDown(KEY_S))
-        {
-            light.l = light.l.add(ZVec3(0, -cameraSpeed, 0));
-        }
-        if (IsKeyDown(KEY_W))
-        {
-            light.l = light.l.add(ZVec3(0, cameraSpeed, 0));
-        }
-
-        if (IsKeyDown(KEY_A))
-        {
-            light.l = light.l.add(ZVec3(-cameraSpeed, 0, 0));
-        }
-        if (IsKeyDown(KEY_D))
-        {
-            light.l = light.l.add(ZVec3(cameraSpeed, 0, 0));
-        }
-
         light.l = light.l.normalized();
         // Display the position of the light on the screen
         ZVec3i lightScreenPos = (viewPortMatrix.mulVector(projectionMatrix.mulVector(ZVec4(light.l)))).toZVec3().toZVec3i();
@@ -82,7 +52,7 @@ public:
             {
                 ZVec4 v(triangle.v[j]);
                 ZVec3 n = triangle.n[j];
-                screenCoords[j] = (viewPortMatrix.mulVector(projectionMatrix.mulVector(v))).toZVec3().toZVec3i();
+                screenCoords[j] = (viewPortMatrix.mulVector(projectionMatrix.mulVector(modelViewMatrix.mulVector(v)))).toZVec3().toZVec3i();
                 worldCoords[j] = triangle.v[j];
                 intensities[j] += light.getIntensityAtNorm(n);
                 intensities[j] += lightFixed.getIntensityAtNorm(n);
