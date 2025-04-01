@@ -14,6 +14,7 @@ struct ZMesh
     {
         std::vector<ZVec3> vertices;
         std::vector<ZVec2> texCoords;
+        std::vector<ZVec3> normCoords;
 
         FILE *file = fopen(fileName, "r");
         if (!file)
@@ -43,7 +44,9 @@ struct ZMesh
                 }
                 else if (line[1] == 'n')
                 {
-                    // TODO Ignore for now
+                    ZVec3 normCoord;
+                    sscanf(line, "vn %f %f %f", &normCoord.x, &normCoord.y);
+                    normCoords.push_back(normCoord);
                 }
                 else
                 {
@@ -62,10 +65,12 @@ struct ZMesh
                 triangle.v[0] = vertices[v1 - 1];
                 triangle.v[1] = vertices[v2 - 1];
                 triangle.v[2] = vertices[v3 - 1];
-                triangle.t[0] = texCoords[vt1 - 1];
-                triangle.t[1] = texCoords[vt2 - 1];
-                triangle.t[2] = texCoords[vt3 - 1];
-                // TODO add vn too
+                triangle.t[0] = ((texCoords[vt1 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
+                triangle.t[1] = ((texCoords[vt2 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
+                triangle.t[2] = ((texCoords[vt3 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
+                triangle.n[0] = normCoords[v1 - 1];
+                triangle.n[1] = normCoords[v2 - 1];
+                triangle.n[2] = normCoords[v3 - 1];
 
                 tris.push_back(triangle);
             }

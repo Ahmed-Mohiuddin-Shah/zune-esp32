@@ -97,45 +97,121 @@ void ZynRenderer::renderTriangle(ZVec3 *pts, uint16_t color)
     }
 }
 
-void ZynRenderer::renderTexturedTriangle(ZVec3 *pts, ZVec2 *tpts, float intensity, ZynTexture *texture)
-{
-    ZVec2 bboxmin(FLT_MAX, -FLT_MAX);
-    ZVec2 bboxmax(-FLT_MAX, FLT_MAX);
-    ZVec2 clamp(screenWidth - 1, screenHeight - 1);
-    for (int i = 0; i < 3; i++)
-    {
-        bboxmin.x = std::max(0.0f, std::min(bboxmin.x, pts[i].x));
-        bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
-        bboxmin.y = std::max(0.0f, std::min(bboxmin.y, pts[i].y));
-        bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
-    }
-    ZVec3 P;
-    for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
-    {
-        for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
-        {
-            ZVec3 bc_screen = barycentricCoordinate(pts, P);
-            if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
-                continue;
-            P.z = 0;
-            P.z += pts[0].z * bc_screen.x;
-            P.z += pts[1].z * bc_screen.y;
-            P.z += pts[2].z * bc_screen.z;
+// void ZynRenderer::renderTexturedTriangle(ZVec3 *pts, ZVec2 *tpts, float intensity, ZynTexture *texture)
+// {
+//     ZVec2 bboxmin(FLT_MAX, -FLT_MAX);
+//     ZVec2 bboxmax(-FLT_MAX, FLT_MAX);
+//     ZVec2 clamp(screenWidth - 1, screenHeight - 1);
+//     for (int i = 0; i < 3; i++)
+//     {
+//         bboxmin.x = std::max(0.0f, std::min(bboxmin.x, pts[i].x));
+//         bboxmax.x = std::min(clamp.x, std::max(bboxmax.x, pts[i].x));
+//         bboxmin.y = std::max(0.0f, std::min(bboxmin.y, pts[i].y));
+//         bboxmax.y = std::min(clamp.y, std::max(bboxmax.y, pts[i].y));
+//     }
+//     ZVec3 P;
+//     for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++)
+//     {
+//         for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++)
+//         {
+//             ZVec3 bc_screen = barycentricCoordinate(pts, P);
+//             if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
+//                 continue;
+//             P.z = 0;
+//             P.z += pts[0].z * bc_screen.x;
+//             P.z += pts[1].z * bc_screen.y;
+//             P.z += pts[2].z * bc_screen.z;
 
+//             if (getZBuffer(P.x, P.y) < P.z)
+//             {
+//                 setZBuffer(P.x, P.y, P.z);
+
+//                 // Calculate barycentric coordinates for texture mapping
+//                 float u = tpts[0].x * bc_screen.x + tpts[1].x * bc_screen.y + tpts[2].x * bc_screen.z;
+//                 float v = tpts[0].y * bc_screen.x + tpts[1].y * bc_screen.y + tpts[2].y * bc_screen.z;
+
+//                 // Get the color from the texture using the texture coordinates
+//                 uint16_t texColor = texture->getPixel(u * ZYNTEX_RESOLUTION, v * ZYNTEX_RESOLUTION);
+
+//                 drawPixel(P.x, P.y, getIntensityRGB565(intensity, texColor));
+//             }
+//         }
+//     }
+// }
+
+void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *intensities, ZynTexture *texture)
+{
+    if (pts[0].y == pts[1].y && pts[0].y == pts[2].y)
+        return; // i dont care about degenerate triangles
+    if (pts[0].y > pts[1].y)
+    {
+        std::swap(pts[0], pts[1]);
+        std::swap(tpts[0], tpts[1]);
+        std::swap(intensities[0], intensities[1]);
+    }
+    if (pts[0].y > pts[2].y)
+    {
+        std::swap(pts[0], pts[2]);
+        std::swap(tpts[0], tpts[2]);
+        std::swap(intensities[0], intensities[2]);
+    }
+    if (pts[1].y > pts[2].y)
+    {
+        std::swap(pts[1], pts[2]);
+        std::swap(tpts[1], tpts[2]);
+        std::swap(intensities[1], intensities[2]);
+    }
+
+    int total_height = pts[2].y - pts[0].y;
+    for (int i = 0; i < total_height; i++)
+    {
+        bool second_half = i > pts[1].y - pts[0].y || pts[1].y == pts[0].y;
+        int segment_height = second_half ? pts[2].y - pts[1].y : pts[1].y - pts[0].y;
+        float alpha = (float)i / total_height;
+        float beta = (float)(i - (second_half ? pts[1].y - pts[0].y : 0)) / segment_height; // be careful: with above conditions no division by zero here
+
+        ZVec3i A = pts[0].add((ZVec3(pts[2].sub(pts[0])).mul(alpha)).toZVec3i());
+        ZVec3i B = second_half ? pts[1].add((ZVec3(pts[2].sub(pts[1])).mul(beta)).toZVec3i()) : pts[0].add((ZVec3(pts[1].sub(pts[0])).mul(beta)).toZVec3i());
+        ZVec2i uvA = tpts[0].add((tpts[2].sub(tpts[0])).mul(alpha));
+        ZVec2i uvB = second_half ? tpts[1].add((tpts[2].sub(tpts[1])).mul(beta)) : tpts[0].add((tpts[1].sub(tpts[0])).mul(beta));
+        float ityA = intensities[0] + (intensities[2] - intensities[0]) * alpha;
+        float ityB = second_half ? intensities[1] + (intensities[2] - intensities[1]) * beta : intensities[0] + (intensities[1] - intensities[0]) * beta;
+
+        if (A.x > B.x)
+        {
+            std::swap(A, B);
+            std::swap(uvA, uvB);
+            std::swap(ityA, ityB);
+        }
+
+        for (int j = A.x; j <= B.x; j++)
+        {
+            float phi = B.x == A.x ? 1. : (float)(j - A.x) / (float)(B.x - A.x);
+            ZVec3i P = (ZVec3(A).add(ZVec3(B.sub(A)).mul(phi))).toZVec3i();
+            ZVec2i uvP = uvA.add((uvB.sub(uvA)).mul(phi));
+            float ityP = ityA + (ityB - ityA) * phi;
+            ityP = std::clamp(ityP, 0.1f, 1.0f);
+            // printf("%f", ityP);
+
+            // int idx = P.x + P.y * screenWidth;
+            if (P.x >= screenWidth || P.y >= screenHeight || P.x < 0 || P.y < 0)
+                continue;
             if (getZBuffer(P.x, P.y) < P.z)
             {
                 setZBuffer(P.x, P.y, P.z);
-
-                // Calculate barycentric coordinates for texture mapping
-                float u = tpts[0].x * bc_screen.x + tpts[1].x * bc_screen.y + tpts[2].x * bc_screen.z;
-                float v = tpts[0].y * bc_screen.x + tpts[1].y * bc_screen.y + tpts[2].y * bc_screen.z;
-
-                // Get the color from the texture using the texture coordinates
-                uint16_t texColor = texture->getPixel(u * ZYNTEX_RESOLUTION, v * ZYNTEX_RESOLUTION);
-
-                drawPixel(P.x, P.y, getIntensityRGB565(intensity, texColor));
+                drawPixel(P.x, P.y, getIntensityRGB565(ityP, texture->getPixel(uvP.x, uvP.y)));
             }
         }
+    }
+    // printf("}\n");
+}
+
+void ZynRenderer::renderSphere(ZVec3 pos, uint16_t color)
+{
+    if (getZBuffer(pos.x, pos.y) < pos.z)
+    {
+        setZBuffer(pos.x, pos.y, pos.z);
+        drawPixel(pos.x, pos.y, color);
     }
 }
 

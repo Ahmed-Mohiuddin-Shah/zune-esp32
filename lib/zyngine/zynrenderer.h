@@ -66,10 +66,12 @@ public:
     ZVec3 barycentricCoordinate(ZVec3 *pts, ZVec3 P);
     ZVec3 world2screen(ZVec3 v);
     void renderTriangle(ZVec3 *pts, uint16_t color);
-    void renderTexturedTriangle(ZVec3 *pts, ZVec2 *tpts, float intensity, ZynTexture *texture);
+    // void renderTexturedTriangle(ZVec3 *pts, ZVec2 *tpts, float intensity, ZynTexture *texture);
+    void renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *intensities, ZynTexture *texture);
     void clear(uint16_t clearColor);
     void printText(int x, int y, const char *text, uint16_t backgroundColor, uint16_t textColor);
     void renderPixel(ZVec3 p, ZVec3 c);
+    void renderSphere(ZVec3 pos, uint16_t color);
     void drawPixel(int x, int y, uint16_t color);
     void drawLine(int x1, int y1, int x2, int y2, uint16_t color);
     void drawRect(int x, int y, int width, int height, uint16_t color);

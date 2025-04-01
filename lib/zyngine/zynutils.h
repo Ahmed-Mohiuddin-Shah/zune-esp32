@@ -2,17 +2,20 @@
 #define ZYNUTILS_H
 
 #include <cstdint>
+#include <cstdio>
 #include <raylib/raylib.h>
 
-inline Color getRaylibColorFromRGB565(uint16_t color)
+    inline Color getRaylibColorFromRGB565(uint16_t color)
 {
-    return {static_cast<unsigned char>((color >> 11) * 255 / 31), 
-            static_cast<unsigned char>((color >> 5 & 0x3F) * 255 / 63), 
-            static_cast<unsigned char>((color & 0x1F) * 255 / 31), 
+    return {static_cast<unsigned char>((color >> 11) * 255 / 31),
+            static_cast<unsigned char>((color >> 5 & 0x3F) * 255 / 63),
+            static_cast<unsigned char>((color & 0x1F) * 255 / 31),
             255};
 }
 
-inline uint16_t getIntensityRGB565(float intensity, uint16_t color) {
+inline uint16_t getIntensityRGB565(float intensity, uint16_t color)
+{
+    // printf("%f\n", intensity);
     // Extract RGB components from the 16-bit RGB565 color
     uint8_t r = (color >> 11) & 0x1F;
     uint8_t g = (color >> 5) & 0x3F;

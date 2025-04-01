@@ -4,11 +4,68 @@
 #include <config_user.h>
 #include <math.h>
 
+struct ZVec2i
+{
+    int x, y;
+
+    ZVec2i(int x = 0, int y = 0) : x(x), y(y) {}
+
+    float getLength()
+    {
+        return sqrt(x * x + y * y);
+    }
+
+    int dot(ZVec2i v)
+    {
+        return x * v.x + y * v.y;
+    }
+
+    float cross(ZVec2i v)
+    {
+        return y * v.x - x * v.y;
+    }
+
+    ZVec2i add(ZVec2i v)
+    {
+        return ZVec2i(x + v.x, y + v.y);
+    }
+
+    ZVec2i sub(ZVec2i v)
+    {
+        return ZVec2i(x - v.x, y - v.y);
+    }
+
+    // TODO Check Implementation again
+    ZVec2i div(ZVec2i v)
+    {
+        return ZVec2i(x / v.x, y / v.y);
+    }
+
+    // TODO Check Implementation again
+    ZVec2i mul(ZVec2i v)
+    {
+        return ZVec2i(x * v.x, y * v.y);
+    }
+
+    ZVec2i mul(float f)
+    {
+        return ZVec2i(x * f, y * f);
+    }
+
+    bool equals(ZVec2i v)
+    {
+        return x == v.x && y == v.y;
+    }
+};
+
 struct ZVec2
 {
     float x, y;
     ZVec2(float x = 0, float y = 0)
         : x(x), y(y) {}
+
+    ZVec2(ZVec2i v)
+        : x(v.x), y(v.y) {}
 
     float normalize()
     {
@@ -65,24 +122,96 @@ struct ZVec2
         return ZVec2(x * v.x, y * v.y);
     }
 
+    ZVec2 mul(float f)
+    {
+        return ZVec2(x * f, y * f);
+    }
+
     bool equals(ZVec2 v)
     {
         return x == v.x && y == v.y;
     }
+
+    ZVec2i toVec2i()
+    {
+        return ZVec2i(x, y);
+    }
+
+    ZVec2 fromZVec2i(ZVec2i v)
+    {
+        return ZVec2(v.x, v.y);
+    }
 };
 
-struct ZVec2i
+struct ZVec3i
 {
-    int x, y;
+    int x, y, z;
+    ZVec3i(int x = 0, int y = 0, int z = 0)
+        : x(x), y(y), z(z) {}
 
-    ZVec2i(int x = 0, int y = 0) : x(x), y(y) {}
+    float getLength()
+    {
+        return sqrt(x * x + y * y + z * z);
+    }
+
+    int dot(ZVec3i v)
+    {
+        return x * v.x + y * v.y + z * v.z;
+    }
+
+    ZVec3i cross(ZVec3i v)
+    {
+        return ZVec3i(
+            y * v.z - z * v.y,
+            z * v.x - x * v.z,
+            x * v.y - y * v.x);
+    }
+
+    ZVec3i add(ZVec3i v)
+    {
+        return ZVec3i(x + v.x, y + v.y, z + v.z);
+    }
+
+    ZVec3i sub(ZVec3i v)
+    {
+        return ZVec3i(x - v.x, y - v.y, z - v.z);
+    }
+
+    // TODO Verify Function Definition
+    ZVec3i div(ZVec3i v)
+    {
+        return ZVec3i(x / v.x, y / v.y, z / v.z);
+    }
+
+    ZVec3i divXYZ(float x, float y, float z)
+    {
+        return ZVec3i(x / x, y / y, z / z);
+    }
+
+    // TODO Verify Function Definition
+    ZVec3i mul(ZVec3i v)
+    {
+        return ZVec3i(x * v.x, y * v.y, z * v.z);
+    }
+
+    ZVec3i mul(float f)
+    {
+        return ZVec3i(x * f, y * f, z * f);
+    }
+
+    ZVec3i equals(ZVec3i v)
+    {
+        return x == v.x && y == v.y && z == v.z;
+    }
 };
-
 struct ZVec3
 {
     float x, y, z;
     ZVec3(float x = 0, float y = 0, float z = 0)
         : x(x), y(y), z(z) {}
+
+    ZVec3(ZVec3i v)
+        : x(v.x), y(v.y), z(v.z) {}
 
     float normalize()
     {
@@ -100,7 +229,7 @@ struct ZVec3
     {
         float invLength = 1.0f / getLength();
 
-        return ZVec3(x, y, z);
+        return ZVec3(x * invLength, y * invLength, z * invLength);
     }
 
     float getLength()
@@ -148,28 +277,53 @@ struct ZVec3
         return ZVec3(x * v.x, y * v.y, z * v.z);
     }
 
-    ZVec3 mulXYZ(float x, float y, float z)
+    ZVec3 mul(float f)
     {
-        return ZVec3(x * x, y * y, z * z);
+        return ZVec3(x * f, y * f, z * f);
     }
 
     ZVec3 equals(ZVec3 v)
     {
         return x == v.x && y == v.y && z == v.z;
     }
+
+    ZVec3i toZVec3i()
+    {
+        return ZVec3i(x, y, z);
+    }
+
+    ZVec3 fromZVec3i(ZVec3i v)
+    {
+        return ZVec3(v.x, v.y, v.z);
+    }
 };
 
 struct ZTriangle
 {
     ZVec3 v[3];
-    ZVec2 t[3];
+    ZVec2i t[3];
+    ZVec3 n[3];
 };
 struct ZVec4
 {
     float x, y, z, w;
     ZVec4(float x = 0, float y = 0, float z = 0, float w = 0)
         : x(x), y(y), z(z), w(w) {}
+
+    ZVec4(ZVec3 v) : x(v.x), y(v.y), z(v.z), w(1.0f) {}
+
+    ZVec3 toZVec3()
+    {
+        return ZVec3(x / w, y / w, z / w);
+    }
+
+    ZVec3 toZVec3(ZVec4 v)
+    {
+        return ZVec3(v.x / v.w, v.y / v.w, v.z / v.w);
+    }
 };
+
+typedef ZVec4 ZQuaternion;
 
 struct ZMat4
 {
@@ -273,6 +427,18 @@ struct ZMat4
         return res;
     }
 
+    ZVec4 mulVector(ZVec4 right)
+    {
+        ZVec4 res = ZVec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+        res.x = m00 * right.x + m01 * right.y + m02 * right.z + m03 * right.w;
+        res.y = m10 * right.x + m11 * right.y + m12 * right.z + m13 * right.w;
+        res.z = m20 * right.x + m21 * right.y + m22 * right.z + m23 * right.w;
+        res.w = m30 * right.x + m31 * right.y + m32 * right.z + m33 * right.w;
+
+        return res;
+    }
+
     ZMat4 scale(float x, float y = -1, float z = -1)
     {
         if (y == -1 && z == -1)
@@ -329,6 +495,17 @@ struct ZMat4
         res.m23 = z;
 
         return this->mulMatrix(res);
+    }
+
+    void toViewport(int x, int y, int w, int h, int depth)
+    {
+        m03 = x + w / 2.0f;
+        m13 = y + h / 2.0f;
+        m23 = depth / 2.0f;
+
+        m00 = w / 2.0f;
+        m11 = h / 2.0f;
+        m22 = depth / 2.0f;
     }
 };
 
