@@ -116,7 +116,7 @@ struct ZVec3
     {
         float invLength = 1.0f / getLength();
 
-        return ZVec3(x, y, z);
+        return ZVec3(x * invLength, y * invLength, z * invLength);
     }
 
     float getLength()
