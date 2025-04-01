@@ -53,7 +53,7 @@ public:
             translation.z += moveSpeed; // Move backward
 
         // Update the translation matrix
-        translationMat = translationMat.translate(translation.x, translation.y, translation.z);
+        translationMat = translationMat.rotate(translation.x, translation.y, translation.z);
 
         // Update the model-view matrix with the translation
         ZMat4 modelMatrix = translationMat;
