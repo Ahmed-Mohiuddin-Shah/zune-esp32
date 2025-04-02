@@ -4,13 +4,15 @@
 #include <vector>
 #include <config_user.h>
 #include <zynmath.h>
+#include <zyntexture.h>
 #include <cstdio>
+#include <string>
 
 struct ZMesh
 {
     std::vector<ZTriangle> tris;
 
-    bool loadFromObjectFile(const char *fileName)
+    bool loadFromObjectFile(const char *fileName, uint32_t texResolution)
     {
         std::vector<ZVec3> vertices;
         std::vector<ZVec2> texCoords;
@@ -66,9 +68,9 @@ struct ZMesh
                 triangle.v[1] = vertices[v2 - 1];
                 triangle.v[2] = vertices[v3 - 1];
                 // TODO Use texture resolution
-                triangle.t[0] = ((texCoords[vt1 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
-                triangle.t[1] = ((texCoords[vt2 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
-                triangle.t[2] = ((texCoords[vt3 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
+                triangle.t[0] = ((texCoords[vt1 - 1]).mul(texResolution)).toVec2i();
+                triangle.t[1] = ((texCoords[vt2 - 1]).mul(texResolution)).toVec2i();
+                triangle.t[2] = ((texCoords[vt3 - 1]).mul(texResolution)).toVec2i();
                 triangle.n[0] = normCoords[vn1 - 1];
                 triangle.n[1] = normCoords[vn2 - 1];
                 triangle.n[2] = normCoords[vn3 - 1];
@@ -77,6 +79,37 @@ struct ZMesh
             }
         }
         fclose(file);
+        return true;
+    }
+};
+
+struct ZModel
+{
+
+    ZMesh mesh;
+    ZynTexture diffuseMap;
+
+    bool loadModel(const char *modelName, const char *path)
+    {
+
+        std::string fullPath(path);
+        fullPath.append("/textures/");
+        fullPath.append(modelName);
+        fullPath.append("_diffuse.zyntex");
+        if (!diffuseMap.loadFromFile(fullPath.c_str()))
+        {
+            return false;
+        }
+
+        fullPath.clear();
+        fullPath.append(path);
+        fullPath.append("/");
+        fullPath.append(modelName);
+        fullPath.append(".obj");
+        if (!mesh.loadFromObjectFile(fullPath.c_str(), diffuseMap.resolution))
+        {
+            return false;
+        }
         return true;
     }
 };

@@ -1,5 +1,5 @@
 #include <zyngine.h>
-#include <zynmesh.h>
+#include <zynmodel.h>
 #include <zynlight.h>
 #include <zyncamera.h>
 #include <zyntexture.h>
@@ -8,7 +8,7 @@
 class Test : public Zyngine
 {
 private:
-    ZMesh model;
+    ZModel model;
     ZynTexture texture;
     ZynLight light;
     ZynLight lightFixed;
@@ -28,12 +28,12 @@ public:
         viewPortMatrix.toViewport(screenWidth / 8, screenHeight / 8, screenWidth * 3 / 4, screenHeight * 3 / 4, depth);
         projectionMatrix.m32 = -1.0f / (camera.eye.sub(camera.center)).normalize();
 
-        model.loadFromObjectFile("./resources/optimized_assets/3d_models/african_head.obj");
-        texture.loadFromFile("./resources/optimized_assets/3d_models/textures/african_head_diffuse.zyntex");
+        model.loadModel("test", "./resources/optimized_assets/3d_models");
     }
 
     void onUserUpdate(float deltaTime) override
     {
+        // return;
 
         // Handle keyboard input for model movement
         ZVec3 translation(0.0f, 0.0f, 0.0f);
@@ -53,10 +53,24 @@ public:
             translation.z += moveSpeed; // Move backward
 
         // Update the translation matrix
-        translationMat = translationMat.rotate(translation.x, translation.y, translation.z);
+        translationMat = translationMat.translate(translation.x, translation.y, translation.z);
 
-        // Update the model-view matrix with the translation
-        ZMat4 modelMatrix = translationMat;
+        ZVec3 rotate(0.0f, 0.0f, 0.0f);
+
+        if (IsKeyDown(KEY_UP))
+            rotate.y += moveSpeed; // Move up
+        if (IsKeyDown(KEY_DOWN))
+            rotate.y -= moveSpeed; // Move down
+        if (IsKeyDown(KEY_LEFT))
+            rotate.x -= moveSpeed; // Move left
+        if (IsKeyDown(KEY_RIGHT))
+            rotate.x += moveSpeed; // Move right
+        if (IsKeyDown(KEY_PERIOD))
+            rotate.z -= moveSpeed; // Move forward
+        if (IsKeyDown(KEY_COMMA))
+            rotate.z += moveSpeed; // Move backward
+
+        translationMat = translationMat.rotate(rotate.x, rotate.y, rotate.z);
 
         light.l = light.l.normalized();
         // Display the position of the light on the screen
@@ -64,9 +78,9 @@ public:
 
         renderer->clear(ZYN_BLACK);
 
-        for (int i = 0; i < model.tris.size(); i++)
+        for (int i = 0; i < model.mesh.tris.size(); i++)
         {
-            ZTriangle triangle = model.tris[i];
+            ZTriangle triangle = model.mesh.tris[i];
             ZVec3i screenCoords[3];
             ZVec3 worldCoords[3];
             float intensities[3] = {0, 0, 0};
@@ -82,7 +96,7 @@ public:
                 intensities[j] += light.getIntensityAtNorm(n);
                 intensities[j] += lightFixed.getIntensityAtNorm(n);
             }
-            renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &texture);
+            renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &model.diffuseMap);
 
             renderer->renderSphere(lightScreenPos, ZYN_WHITE);
             renderer->renderSphere((viewPortMatrix.mulVector(projectionMatrix.mulVector(ZVec4(lightFixed.l)))).toZVec3().toZVec3i(), ZYN_WHITE);

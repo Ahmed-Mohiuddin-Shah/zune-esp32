@@ -131,7 +131,7 @@ void ZynRenderer::renderTriangle(ZVec3 *pts, uint16_t color)
 //                 float v = tpts[0].y * bc_screen.x + tpts[1].y * bc_screen.y + tpts[2].y * bc_screen.z;
 
 //                 // Get the color from the texture using the texture coordinates
-//                 uint16_t texColor = texture->getPixel(u * ZYNTEX_RESOLUTION, v * ZYNTEX_RESOLUTION);
+//                 uint16_t texColor = texture->getPixel(u * ZYNTEX_MAX_RESOLUTION, v * ZYNTEX_MAX_RESOLUTION);
 
 //                 drawPixel(P.x, P.y, getIntensityRGB565(intensity, texColor));
 //             }
@@ -319,9 +319,9 @@ void ZynRenderer::drawTexture(ZynTexture texture, int x, int y)
 {
     for (int i = 0; i < texture.bufferLength; i++)
     {
-        int xp = i % ZYNTEX_RESOLUTION;
-        int yp = i / ZYNTEX_RESOLUTION;
-        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(i % ZYNTEX_RESOLUTION, i / ZYNTEX_RESOLUTION)));
+        int xp = i % texture.resolution;
+        int yp = i / texture.resolution;
+        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(xp, yp)));
     }
 }
 
