@@ -25,10 +25,8 @@ public:
     {
         lightFixed.l = ZVec3(-1.0f, -1.0f, 0.0f);
         modelViewMatrix = camera.getLookAtMatrix();
-        projectionMatrix;
         viewPortMatrix.toViewport(screenWidth / 8, screenHeight / 8, screenWidth * 3 / 4, screenHeight * 3 / 4, depth);
-        projectionMatrix.m32 = -1.0f / (camera.eye.sub(camera.center)).normalize();
-
+        projectionMatrix = camera.getProjectionMatrix();
         model.loadModel("test", "./resources/optimized_assets/3d_models");
 
         z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));

@@ -35,6 +35,13 @@ struct ZynCamera
 
         return m;
     }
+
+    ZMat4 getProjectionMatrix()
+    {
+        ZMat4 m;
+        m.m32 = -1.0f / (eye.sub(center)).normalize();
+        return m;
+    }
 };
 
 #endif
