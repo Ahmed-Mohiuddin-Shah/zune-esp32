@@ -33,8 +33,6 @@ public:
 
     void onUserUpdate(float deltaTime) override
     {
-        // return;
-
         // Handle keyboard input for model movement
         ZVec3 translation(0.0f, 0.0f, 0.0f);
         float moveSpeed = 5.0f * deltaTime;
