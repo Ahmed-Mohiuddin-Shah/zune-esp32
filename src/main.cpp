@@ -17,6 +17,7 @@ private:
     ZMat4 projectionMatrix;
     ZMat4 viewPortMatrix;
     ZMat4 translationMat;
+    ZMat4 z;
     int depth = 255;
 
 public:
@@ -29,6 +30,8 @@ public:
         projectionMatrix.m32 = -1.0f / (camera.eye.sub(camera.center)).normalize();
 
         model.loadModel("test", "./resources/optimized_assets/3d_models");
+
+        z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
     }
 
     void onUserUpdate(float deltaTime) override
@@ -72,7 +75,7 @@ public:
 
         light.l = light.l.normalized();
         // Display the position of the light on the screen
-        ZVec3i lightScreenPos = (viewPortMatrix.mulVector(projectionMatrix.mulVector(ZVec4(light.l)))).toZVec3().toZVec3i();
+        ZVec3i lightScreenPos = (z.mulVector(ZVec4(light.l))).toZVec3().toZVec3i();
 
         renderer->clear(ZYN_BLACK);
 
@@ -88,7 +91,7 @@ public:
                 ZVec4 v(triangle.v[j]);
                 v = translationMat.mulVector(v);
                 ZVec3 n = translationMat.mulVector(triangle.n[j]).normalized();
-                screenCoords[j] = (viewPortMatrix.mulVector(projectionMatrix.mulVector(modelViewMatrix.mulVector(v)))).toZVec3().toZVec3i();
+                screenCoords[j] = (z.mulVector(v)).toZVec3().toZVec3i();
                 worldCoords[j] = triangle.v[j];
 
                 intensities[j] += light.getIntensityAtNorm(n);
@@ -97,7 +100,7 @@ public:
             renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &model.diffuseMap);
 
             renderer->renderSphere(lightScreenPos, ZYN_WHITE);
-            renderer->renderSphere((viewPortMatrix.mulVector(projectionMatrix.mulVector(ZVec4(lightFixed.l)))).toZVec3().toZVec3i(), ZYN_WHITE);
+            renderer->renderSphere((z.mulVector(ZVec4(lightFixed.l))).toZVec3().toZVec3i(), ZYN_WHITE);
         }
     }
 };
