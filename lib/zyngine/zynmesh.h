@@ -65,12 +65,13 @@ struct ZMesh
                 triangle.v[0] = vertices[v1 - 1];
                 triangle.v[1] = vertices[v2 - 1];
                 triangle.v[2] = vertices[v3 - 1];
+                // TODO Use texture resolution
                 triangle.t[0] = ((texCoords[vt1 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
                 triangle.t[1] = ((texCoords[vt2 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
                 triangle.t[2] = ((texCoords[vt3 - 1]).mul(ZYNTEX_RESOLUTION)).toVec2i();
-                triangle.n[0] = normCoords[v1 - 1];
-                triangle.n[1] = normCoords[v2 - 1];
-                triangle.n[2] = normCoords[v3 - 1];
+                triangle.n[0] = normCoords[vn1 - 1];
+                triangle.n[1] = normCoords[vn2 - 1];
+                triangle.n[2] = normCoords[vn3 - 1];
 
                 tris.push_back(triangle);
             }
