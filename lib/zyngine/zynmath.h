@@ -307,7 +307,7 @@ struct ZTriangle
 struct ZVec4
 {
     float x, y, z, w;
-    ZVec4(float x = 0, float y = 0, float z = 0, float w = 0)
+    ZVec4(float x = 0, float y = 0, float z = 0, float w = 1.0f)
         : x(x), y(y), z(z), w(w) {}
 
     ZVec4(ZVec3 v) : x(v.x), y(v.y), z(v.z), w(1.0f) {}
