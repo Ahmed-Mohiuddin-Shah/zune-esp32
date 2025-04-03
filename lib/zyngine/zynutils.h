@@ -38,13 +38,12 @@ inline uint16_t getIntensityRGB565(float intensity, uint16_t color)
 
 inline bool isInClipView(ZVec3 *points, float nearPlane, float farPlane)
 {
-    float z = 0;
+    float z = nearPlane;
     for (int i = 0; i < 3; i++)
     {
-        z += points[i].z;
+        if (points[i].z < z)
+            z = points[i].z;
     }
-
-    z = z / 3;
 
     return z < nearPlane && z > farPlane;
 }
