@@ -4,8 +4,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <raylib/raylib.h>
+#include <zynmath.h>
 
-    inline Color getRaylibColorFromRGB565(uint16_t color)
+inline Color getRaylibColorFromRGB565(uint16_t color)
 {
     return {static_cast<unsigned char>((color >> 11) * 255 / 31),
             static_cast<unsigned char>((color >> 5 & 0x3F) * 255 / 63),
@@ -33,6 +34,18 @@ inline uint16_t getIntensityRGB565(float intensity, uint16_t color)
 
     // Reconstruct the RGB565 color
     return (r << 11) | (g << 5) | b;
+}
+
+inline bool isInClipView(ZVec3 *points, float nearPlane, float farPlane)
+{
+    float z = nearPlane;
+    for (int i = 0; i < 3; i++)
+    {
+        if (points[i].z < z)
+            z = points[i].z;
+    }
+
+    return z < nearPlane && z > farPlane;
 }
 
 #endif

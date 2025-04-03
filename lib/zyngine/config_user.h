@@ -22,6 +22,6 @@
 #define ZYNGINE_NATIVE_RAYLIB
 
 // .zyntex resolution
-#define ZYNTEX_RESOLUTION 256
+#define ZYNTEX_MAX_RESOLUTION 256
 
 #endif // ZYNGINE_CONFIG_USER_H

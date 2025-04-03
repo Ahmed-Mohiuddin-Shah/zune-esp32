@@ -131,7 +131,7 @@ void ZynRenderer::renderTriangle(ZVec3 *pts, uint16_t color)
 //                 float v = tpts[0].y * bc_screen.x + tpts[1].y * bc_screen.y + tpts[2].y * bc_screen.z;
 
 //                 // Get the color from the texture using the texture coordinates
-//                 uint16_t texColor = texture->getPixel(u * ZYNTEX_RESOLUTION, v * ZYNTEX_RESOLUTION);
+//                 uint16_t texColor = texture->getPixel(u * ZYNTEX_MAX_RESOLUTION, v * ZYNTEX_MAX_RESOLUTION);
 
 //                 drawPixel(P.x, P.y, getIntensityRGB565(intensity, texColor));
 //             }
@@ -163,6 +163,12 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
     }
 
     int total_height = pts[2].y - pts[0].y;
+
+    // TODO Revise this logic maybe implement triangle clipping but may not be needed due to using barycentric coordinates
+    if (total_height > 480)
+    {
+        return;
+    }
     for (int i = 0; i < total_height; i++)
     {
         bool second_half = i > pts[1].y - pts[0].y || pts[1].y == pts[0].y;
@@ -191,9 +197,6 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
             ZVec2i uvP = uvA.add((uvB.sub(uvA)).mul(phi));
             float ityP = ityA + (ityB - ityA) * phi;
             ityP = std::clamp(ityP, 0.1f, 1.0f);
-            // printf("%f", ityP);
-
-            // int idx = P.x + P.y * screenWidth;
             if (P.x >= screenWidth || P.y >= screenHeight || P.x < 0 || P.y < 0)
                 continue;
             if (getZBuffer(P.x, P.y) < P.z)
@@ -203,7 +206,6 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
             }
         }
     }
-    // printf("}\n");
 }
 
 void ZynRenderer::renderSphere(ZVec3 pos, uint16_t color)
@@ -319,9 +321,9 @@ void ZynRenderer::drawTexture(ZynTexture texture, int x, int y)
 {
     for (int i = 0; i < texture.bufferLength; i++)
     {
-        int xp = i % ZYNTEX_RESOLUTION;
-        int yp = i / ZYNTEX_RESOLUTION;
-        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(i % ZYNTEX_RESOLUTION, i / ZYNTEX_RESOLUTION)));
+        int xp = i % texture.resolution;
+        int yp = i / texture.resolution;
+        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(xp, yp)));
     }
 }
 

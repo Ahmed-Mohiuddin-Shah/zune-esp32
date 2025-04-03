@@ -38,7 +38,6 @@ void Zyngine::run()
 #ifdef ZYNGINE_NATIVE_RAYLIB
     while (!WindowShouldClose())
     {
-
         BeginTextureMode(renderer->frame);
         onUserUpdate(GetFrameTime());
         EndTextureMode();
@@ -47,7 +46,7 @@ void Zyngine::run()
         DrawTexturePro(
             renderer->frame.texture,
             {0, 0, (float)renderer->frame.texture.width, (float)(renderer->frame.texture.height)},
-            {0, 0, (float)renderer->frame.texture.width, (float)renderer->frame.texture.height},
+            {0, 0, (float)renderer->frame.texture.width, -(float)renderer->frame.texture.height},
             {0, 0}, 0.0f, WHITE);
         EndDrawing();
     }

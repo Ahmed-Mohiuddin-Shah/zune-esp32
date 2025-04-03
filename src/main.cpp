@@ -1,5 +1,5 @@
 #include <zyngine.h>
-#include <zynmesh.h>
+#include <zynmodel.h>
 #include <zynlight.h>
 #include <zyncamera.h>
 #include <zyntexture.h>
@@ -8,7 +8,8 @@
 class Test : public Zyngine
 {
 private:
-    ZMesh model;
+    ZModel model;
+    ZModel floor;
     ZynTexture texture;
     ZynLight light;
     ZynLight lightFixed;
@@ -17,63 +18,69 @@ private:
     ZMat4 projectionMatrix;
     ZMat4 viewPortMatrix;
     ZMat4 translationMat;
+    ZMat4 z;
+    float near = 8.0f;
+    float far = -100.0f;
     int depth = 255;
 
 public:
     void onUserCreate() override
     {
-
+        light.l = ZVec3(0.0f, -0.5f, 0.1f).normalized();
+        lightFixed.l = ZVec3(-2.0f, -1.0f, 2.0f).normalized();
         modelViewMatrix = camera.getLookAtMatrix();
-        projectionMatrix;
-        viewPortMatrix.toViewport(screenWidth / 8, screenHeight / 8, screenWidth * 3 / 4, screenHeight * 3 / 4, depth);
-        projectionMatrix.m32 = -1.0f / (camera.eye.sub(camera.center)).normalize();
+        viewPortMatrix.toViewport(0, 0, screenWidth, screenHeight, depth);
+        projectionMatrix = camera.getProjectionMatrix();
+        model.loadModel("test", "./resources/optimized_assets/3d_models");
+        floor.loadModel("floor", "./resources/optimized_assets/3d_models");
 
-        model.loadFromObjectFile("./resources/optimized_assets/3d_models/african_head.obj");
-        texture.loadFromFile("./resources/optimized_assets/3d_models/textures/african_head_diffuse.zyntex");
+        z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
     }
 
     void onUserUpdate(float deltaTime) override
     {
+        // Handle keyboard input for model movement
+        ZVec3 translation(0.0f, 0.0f, 0.0f);
+        float moveSpeed = 5.0f * deltaTime;
 
-        float cameraSpeed = 5.0f * deltaTime;
-
-        // Move up (Q) and down (E)
-        if (IsKeyDown(KEY_Q))
-        {
-            light.l = light.l.add(ZVec3(0, 0, -cameraSpeed));
-        }
-        if (IsKeyDown(KEY_E))
-        {
-            light.l = light.l.add(ZVec3(0, 0, cameraSpeed));
-        }
-
-        if (IsKeyDown(KEY_S))
-        {
-            light.l = light.l.add(ZVec3(0, -cameraSpeed, 0));
-        }
         if (IsKeyDown(KEY_W))
-        {
-            light.l = light.l.add(ZVec3(0, cameraSpeed, 0));
-        }
-
+            translation.y += moveSpeed; // Move up
+        if (IsKeyDown(KEY_S))
+            translation.y -= moveSpeed; // Move down
         if (IsKeyDown(KEY_A))
-        {
-            light.l = light.l.add(ZVec3(-cameraSpeed, 0, 0));
-        }
+            translation.x -= moveSpeed; // Move left
         if (IsKeyDown(KEY_D))
-        {
-            light.l = light.l.add(ZVec3(cameraSpeed, 0, 0));
-        }
+            translation.x += moveSpeed; // Move right
+        if (IsKeyDown(KEY_Q))
+            translation.z -= moveSpeed; // Move forward
+        if (IsKeyDown(KEY_E))
+            translation.z += moveSpeed; // Move backward
 
-        light.l = light.l.normalized();
-        // Display the position of the light on the screen
-        ZVec3i lightScreenPos = (viewPortMatrix.mulVector(projectionMatrix.mulVector(ZVec4(light.l)))).toZVec3().toZVec3i();
+        // Update the translation matrix
+        translationMat = translationMat.translate(translation.x, translation.y, translation.z);
+
+        ZVec3 rotate(0.0f, 0.0f, 0.0f);
+
+        if (IsKeyDown(KEY_UP))
+            rotate.y += moveSpeed; // Move up
+        if (IsKeyDown(KEY_DOWN))
+            rotate.y -= moveSpeed; // Move down
+        if (IsKeyDown(KEY_LEFT))
+            rotate.x -= moveSpeed; // Move left
+        if (IsKeyDown(KEY_RIGHT))
+            rotate.x += moveSpeed; // Move right
+        if (IsKeyDown(KEY_PERIOD))
+            rotate.z -= moveSpeed; // Move forward
+        if (IsKeyDown(KEY_COMMA))
+            rotate.z += moveSpeed; // Move backward
+
+        translationMat = translationMat.rotate(rotate.x, rotate.y, rotate.z);
 
         renderer->clear(ZYN_BLACK);
 
-        for (int i = 0; i < model.tris.size(); i++)
+        for (int i = 0; i < model.mesh.tris.size(); i++)
         {
-            ZTriangle triangle = model.tris[i];
+            ZTriangle triangle = model.mesh.tris[i];
             ZVec3i screenCoords[3];
             ZVec3 worldCoords[3];
             float intensities[3] = {0, 0, 0};
@@ -81,17 +88,43 @@ public:
             for (int j = 0; j < 3; j++)
             {
                 ZVec4 v(triangle.v[j]);
-                ZVec3 n = triangle.n[j];
-                screenCoords[j] = (viewPortMatrix.mulVector(projectionMatrix.mulVector(v))).toZVec3().toZVec3i();
-                worldCoords[j] = triangle.v[j];
+                v = translationMat.mulVector(v);
+                worldCoords[j] = v.toZVec3();
+                ZVec3 n = translationMat.mulVector(triangle.n[j]).normalized();
+
+                screenCoords[j] = (z.mulVector(v)).toZVec3().toZVec3i();
+
                 intensities[j] += light.getIntensityAtNorm(n);
                 intensities[j] += lightFixed.getIntensityAtNorm(n);
             }
-            renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &texture);
 
-            renderer->renderSphere(lightScreenPos, ZYN_WHITE);
-            renderer->renderSphere((viewPortMatrix.mulVector(projectionMatrix.mulVector(ZVec4(lightFixed.l)))).toZVec3().toZVec3i(), ZYN_WHITE);
+            if (isInClipView(worldCoords, near, far))
+                renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &model.diffuseMap);
         }
+
+        for (int i = 0; i < floor.mesh.tris.size(); i++)
+        {
+            ZTriangle triangle = floor.mesh.tris[i];
+            ZVec3i screenCoords[3];
+            float intensities[3] = {0, 0, 0};
+
+            for (int j = 0; j < 3; j++)
+            {
+                ZVec4 v(triangle.v[j]);
+                // v = translationMat.mulVector(v);
+                // ZVec3 n = translationMat.mulVector(triangle.n[j]).normalized();a
+                screenCoords[j] = (z.mulVector(v)).toZVec3().toZVec3i();
+
+                intensities[j] += light.getIntensityAtNorm(triangle.n[j]);
+                intensities[j] += lightFixed.getIntensityAtNorm(triangle.n[j]);
+            }
+            renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &floor.diffuseMap);
+        }
+
+        ZVec3 v = z.mulVector(light.l);
+        DrawCircle(v.x, v.y, v.z / 400, WHITE);
+        v = z.mulVector(lightFixed.l);
+        DrawCircle(v.x, v.y, v.z / 400, WHITE);
     }
 };
 

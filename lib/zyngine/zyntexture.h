@@ -8,8 +8,9 @@
 
 struct ZynTexture
 {
-    uint16_t pixels[ZYNTEX_RESOLUTION * ZYNTEX_RESOLUTION];
-    int bufferLength = ZYNTEX_RESOLUTION * ZYNTEX_RESOLUTION;
+    uint32_t pixels[ZYNTEX_MAX_RESOLUTION * ZYNTEX_MAX_RESOLUTION];
+    uint32_t bufferLength = ZYNTEX_MAX_RESOLUTION * ZYNTEX_MAX_RESOLUTION;
+    uint32_t resolution = ZYNTEX_MAX_RESOLUTION;
 
     bool
     loadFromFile(const char *fileName)
@@ -34,11 +35,14 @@ struct ZynTexture
 
         fgets(line, sizeof(line), file);
         sscanf(line, "%d %d", &x, &y);
-        if (x != y && x != ZYNTEX_RESOLUTION)
+        if (x != y && x > ZYNTEX_MAX_RESOLUTION)
         {
             printf("Invalid .zyntex resolution\n");
             return false;
         }
+
+        bufferLength = x * x;
+        resolution = x;
 
         while (!feof(file))
         {
@@ -51,20 +55,20 @@ struct ZynTexture
         return true;
     }
 
-    uint16_t getPixel(int x, int y)
+    uint16_t getPixel(uint32_t x, uint32_t y)
     {
-        if (x >= 0 && x < ZYNTEX_RESOLUTION && y >= 0 && y < ZYNTEX_RESOLUTION)
+        if (x >= 0 && x < resolution && y >= 0 && y < resolution)
         {
-            return pixels[y * ZYNTEX_RESOLUTION + x];
+            return pixels[y * resolution + x];
         }
         return 0x0000; // Return transparent black if out of bounds
     }
 
-    void setPixel(int x, int y, uint16_t color)
+    void setPixel(uint32_t x, uint32_t y, uint16_t color)
     {
-        if (x >= 0 && x < ZYNTEX_RESOLUTION && y >= 0 && y < ZYNTEX_RESOLUTION)
+        if (x >= 0 && x < resolution && y >= 0 && y < resolution)
         {
-            pixels[y * ZYNTEX_RESOLUTION + x] = color;
+            pixels[y * resolution + x] = color;
         }
     }
 
