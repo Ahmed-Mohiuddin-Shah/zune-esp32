@@ -15,3 +15,5 @@ https://github.com/padraigfl/twsu-arcade-coder-esp32
 https://github.com/zzef/pillow
 
 https://bytesnbits.co.uk/esp32-7-inch-lcd-elecrow/
+
+https://github.com/ssloy/tinyrenderer/issues/154

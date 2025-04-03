@@ -9,6 +9,7 @@ class Test : public Zyngine
 {
 private:
     ZModel model;
+    ZModel floor;
     ZynTexture texture;
     ZynLight light;
     ZynLight lightFixed;
@@ -18,16 +19,20 @@ private:
     ZMat4 viewPortMatrix;
     ZMat4 translationMat;
     ZMat4 z;
+    float near = 8.0f;
+    float far = -100.0f;
     int depth = 255;
 
 public:
     void onUserCreate() override
     {
-        lightFixed.l = ZVec3(-1.0f, -1.0f, 0.0f);
+        light.l = ZVec3(0.0f, -0.5f, 0.1f).normalized();
+        lightFixed.l = ZVec3(-2.0f, -1.0f, 2.0f).normalized();
         modelViewMatrix = camera.getLookAtMatrix();
-        viewPortMatrix.toViewport(screenWidth / 8, screenHeight / 8, screenWidth * 3 / 4, screenHeight * 3 / 4, depth);
+        viewPortMatrix.toViewport(0, 0, screenWidth, screenHeight, depth);
         projectionMatrix = camera.getProjectionMatrix();
         model.loadModel("test", "./resources/optimized_assets/3d_models");
+        floor.loadModel("floor", "./resources/optimized_assets/3d_models");
 
         z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
     }
@@ -71,10 +76,6 @@ public:
 
         translationMat = translationMat.rotate(rotate.x, rotate.y, rotate.z);
 
-        light.l = light.l.normalized();
-        // Display the position of the light on the screen
-        ZVec3i lightScreenPos = (z.mulVector(ZVec4(light.l))).toZVec3().toZVec3i();
-
         renderer->clear(ZYN_BLACK);
 
         for (int i = 0; i < model.mesh.tris.size(); i++)
@@ -88,18 +89,43 @@ public:
             {
                 ZVec4 v(triangle.v[j]);
                 v = translationMat.mulVector(v);
+                worldCoords[j] = v.toZVec3();
                 ZVec3 n = translationMat.mulVector(triangle.n[j]).normalized();
+                ZVec3 n = (triangle.n[j]);
+
                 screenCoords[j] = (z.mulVector(v)).toZVec3().toZVec3i();
-                worldCoords[j] = triangle.v[j];
 
                 intensities[j] += light.getIntensityAtNorm(n);
                 intensities[j] += lightFixed.getIntensityAtNorm(n);
             }
-            renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &model.diffuseMap);
 
-            renderer->renderSphere(lightScreenPos, ZYN_WHITE);
-            renderer->renderSphere((z.mulVector(ZVec4(lightFixed.l))).toZVec3().toZVec3i(), ZYN_WHITE);
+            if (isInClipView(worldCoords, near, far))
+                renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &model.diffuseMap);
         }
+
+        for (int i = 0; i < floor.mesh.tris.size(); i++)
+        {
+            ZTriangle triangle = floor.mesh.tris[i];
+            ZVec3i screenCoords[3];
+            float intensities[3] = {0, 0, 0};
+
+            for (int j = 0; j < 3; j++)
+            {
+                ZVec4 v(triangle.v[j]);
+                // v = translationMat.mulVector(v);
+                // ZVec3 n = translationMat.mulVector(triangle.n[j]).normalized();a
+                screenCoords[j] = (z.mulVector(v)).toZVec3().toZVec3i();
+
+                intensities[j] += light.getIntensityAtNorm(triangle.n[j]);
+                intensities[j] += lightFixed.getIntensityAtNorm(triangle.n[j]);
+            }
+            renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &floor.diffuseMap);
+        }
+
+        ZVec3 v = z.mulVector(light.l);
+        DrawCircle(v.x, v.y, v.z / 400, WHITE);
+        v = z.mulVector(lightFixed.l);
+        DrawCircle(v.x, v.y, v.z / 400, WHITE);
     }
 };
 

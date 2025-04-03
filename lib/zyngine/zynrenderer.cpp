@@ -163,6 +163,12 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
     }
 
     int total_height = pts[2].y - pts[0].y;
+
+    // TODO Revise this logic maybe implement triangle clipping but may not be needed due to using barycentric coordinates
+    if (total_height > 480)
+    {
+        return;
+    }
     for (int i = 0; i < total_height; i++)
     {
         bool second_half = i > pts[1].y - pts[0].y || pts[1].y == pts[0].y;
@@ -191,9 +197,6 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
             ZVec2i uvP = uvA.add((uvB.sub(uvA)).mul(phi));
             float ityP = ityA + (ityB - ityA) * phi;
             ityP = std::clamp(ityP, 0.1f, 1.0f);
-            // printf("%f", ityP);
-
-            // int idx = P.x + P.y * screenWidth;
             if (P.x >= screenWidth || P.y >= screenHeight || P.x < 0 || P.y < 0)
                 continue;
             if (getZBuffer(P.x, P.y) < P.z)
@@ -203,7 +206,6 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
             }
         }
     }
-    // printf("}\n");
 }
 
 void ZynRenderer::renderSphere(ZVec3 pos, uint16_t color)
