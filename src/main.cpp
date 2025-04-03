@@ -91,7 +91,7 @@ public:
                 v = translationMat.mulVector(v);
                 worldCoords[j] = v.toZVec3();
                 ZVec3 n = translationMat.mulVector(triangle.n[j]).normalized();
-                ZVec3 n = (triangle.n[j]);
+                // ZVec3 n = (triangle.n[j]);
 
                 screenCoords[j] = (z.mulVector(v)).toZVec3().toZVec3i();
 
