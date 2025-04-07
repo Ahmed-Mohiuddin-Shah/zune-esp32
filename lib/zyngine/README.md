@@ -40,6 +40,7 @@ zynutils.h          - General utilities.
 - [ ] Physics (colliders, rigid bodies, etc.)
 - [ ] Map loader
 - [ ] Layout tool
+- [ ] Platform Optimized Math Structs and Functions
 
 ## Getting Started
 
