@@ -523,6 +523,27 @@ struct ZMat4
         m11 = h / 2.0f;
         m22 = depth / 2.0f;
     }
+
+    ZMat4 getInverse() {
+        ZMat4 matrix;
+        matrix.m00 = m00;
+        matrix.m01 = m10;
+        matrix.m02 = m20;
+        matrix.m03 = 0.0f;
+        matrix.m10 = m01;
+        matrix.m11 = m11;
+        matrix.m12 = m21;
+        matrix.m13 = 0.0f;
+        matrix.m20 = m02;
+        matrix.m21 = m12;
+        matrix.m22 = m22;
+        matrix.m23 = 0.0f;
+        matrix.m30 = -(m30 * matrix.m00 + m31 * matrix.m10 + m32 * matrix.m20);
+        matrix.m31 = -(m30 * matrix.m01 + m31 * matrix.m11 + m32 * matrix.m21);
+        matrix.m32 = -(m30 * matrix.m02 + m31 * matrix.m12 + m32 * matrix.m22);
+        matrix.m33 = 1.0f;
+        return matrix;
+    }
 };
 
 #endif

@@ -19,7 +19,7 @@ private:
     ZMat4 viewPortMatrix;
     ZMat4 translationMat;
     ZMat4 z;
-    float near = 8.0f;
+    float near = 0.1f;
     float far = -100.0f;
     int depth = 255;
 
@@ -27,7 +27,7 @@ public:
     void onUserCreate() override
     {
         light.l = ZVec3(0.0f, -0.5f, 0.1f).normalized();
-        lightFixed.l = ZVec3(-2.0f, -1.0f, 2.0f).normalized();
+        lightFixed.l = ZVec3(1.0f, 1.0f, 1.0f).normalized();
         modelViewMatrix = camera.getLookAtMatrix();
         viewPortMatrix.toViewport(0, 0, screenWidth, screenHeight, depth);
         projectionMatrix = camera.getProjectionMatrix();
@@ -58,6 +58,12 @@ public:
 
         // Update the translation matrix
         translationMat = translationMat.translate(translation.x, translation.y, translation.z);
+
+        camera.eye = camera.eye.add(translation);
+        camera.center = camera.center.add(translation);
+        modelViewMatrix = camera.getLookAtMatrix();
+
+        z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
 
         ZVec3 rotate(0.0f, 0.0f, 0.0f);
 
