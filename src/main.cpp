@@ -34,6 +34,15 @@ public:
         model.loadModel("test", "./resources/optimized_assets/3d_models");
         floor.loadModel("floor", "./resources/optimized_assets/3d_models");
 
+        translationMat = translationMat.translate(1.0f, 1.0f, 0.0f);
+        for (int i = 0; i < model.mesh.tris.size(); i++)
+        {
+            model.mesh.tris[i].v[0] = translationMat.mulVector(model.mesh.tris[i].v[0]);
+            model.mesh.tris[i].v[1] = translationMat.mulVector(model.mesh.tris[i].v[1]);
+            model.mesh.tris[i].v[2] = translationMat.mulVector(model.mesh.tris[i].v[2]);
+        }
+        translationMat.reset();
+
         z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
     }
 
@@ -59,12 +68,6 @@ public:
         // Update the translation matrix
         translationMat = translationMat.translate(translation.x, translation.y, translation.z);
 
-        camera.eye = camera.eye.add(translation);
-        camera.center = camera.center.add(translation);
-        modelViewMatrix = camera.getLookAtMatrix();
-
-        z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
-
         ZVec3 rotate(0.0f, 0.0f, 0.0f);
 
         if (IsKeyDown(KEY_UP))
@@ -81,6 +84,15 @@ public:
             rotate.z += moveSpeed; // Move backward
 
         translationMat = translationMat.rotate(rotate.x, rotate.y, rotate.z);
+
+        ZynCamera cam = camera.copy();
+        // cam.eye = camera.eye.add(translation);
+        // cam.center = camera.center.add(translation);
+        cam.eye = translationMat.mulVector(cam.eye);
+        cam.center = translationMat.mulVector(cam.center);
+        modelViewMatrix = cam.getLookAtMatrix();
+
+        z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
 
         renderer->clear(ZYN_BLACK);
 
