@@ -47,7 +47,7 @@ struct ZMesh
                 else if (line[1] == 'n')
                 {
                     ZVec3 normCoord;
-                    sscanf(line, "vn %f %f %f", &normCoord.x, &normCoord.y);
+                    sscanf(line, "vn %f %f %f", &normCoord.x, &normCoord.y, &normCoord.z);
                     normCoords.push_back(normCoord);
                 }
                 else
