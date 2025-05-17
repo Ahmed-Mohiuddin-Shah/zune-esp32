@@ -31,7 +31,7 @@ public:
         modelViewMatrix = camera.getLookAtMatrix();
         viewPortMatrix.toViewport(0, 0, screenWidth, screenHeight, depth);
         projectionMatrix = camera.getProjectionMatrix();
-        model.loadModel("test", "./resources/optimized_assets/3d_models");
+        // model.loadModel("test", "./resources/optimized_assets/3d_models");
         floor.loadModel("floor", "./resources/optimized_assets/3d_models");
 
         translationMat = translationMat.translate(1.0f, 1.0f, 0.0f);
