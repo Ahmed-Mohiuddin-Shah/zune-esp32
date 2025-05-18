@@ -6,7 +6,6 @@
 class Zyngine
 {
 protected:
-    // TODO
     int screenWidth;
     int screenHeight;
     ZynRenderer *renderer;

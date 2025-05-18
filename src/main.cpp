@@ -1,3 +1,5 @@
+// #include <Arduino.h>
+
 #include <zyngine.h>
 #include <zynmodel.h>
 #include <zynlight.h>
@@ -52,36 +54,23 @@ public:
         ZVec3 translation(0.0f, 0.0f, 0.0f);
         float moveSpeed = 5.0f * deltaTime;
 
-        if (IsKeyDown(KEY_W))
-            translation.y += moveSpeed; // Move up
-        if (IsKeyDown(KEY_S))
-            translation.y -= moveSpeed; // Move down
-        if (IsKeyDown(KEY_A))
-            translation.x -= moveSpeed; // Move left
-        if (IsKeyDown(KEY_D))
-            translation.x += moveSpeed; // Move right
-        if (IsKeyDown(KEY_Q))
-            translation.z -= moveSpeed; // Move forward
-        if (IsKeyDown(KEY_E))
-            translation.z += moveSpeed; // Move backward
+        // if (IsKeyDown(KEY_W))
+        //     translation.y += moveSpeed; // Move up
+        // if (IsKeyDown(KEY_S))
+        //     translation.y -= moveSpeed; // Move down
+        // if (IsKeyDown(KEY_A))
+        //     translation.x -= moveSpeed; // Move left
+        // if (IsKeyDown(KEY_D))
+        //     translation.x += moveSpeed; // Move right
+        // if (IsKeyDown(KEY_Q))
+        //     translation.z -= moveSpeed; // Move forward
+        // if (IsKeyDown(KEY_E))
+        //     translation.z += moveSpeed; // Move backward
 
         // Update the translation matrix
         translationMat = translationMat.translate(translation.x, translation.y, translation.z);
 
         ZVec3 rotate(0.0f, 0.0f, 0.0f);
-
-        if (IsKeyDown(KEY_UP))
-            rotate.y += moveSpeed; // Move up
-        if (IsKeyDown(KEY_DOWN))
-            rotate.y -= moveSpeed; // Move down
-        if (IsKeyDown(KEY_LEFT))
-            rotate.x -= moveSpeed; // Move left
-        if (IsKeyDown(KEY_RIGHT))
-            rotate.x += moveSpeed; // Move right
-        if (IsKeyDown(KEY_PERIOD))
-            rotate.z -= moveSpeed; // Move forward
-        if (IsKeyDown(KEY_COMMA))
-            rotate.z += moveSpeed; // Move backward
 
         translationMat = translationMat.rotate(rotate.x, rotate.y, rotate.z);
 
@@ -140,16 +129,30 @@ public:
         }
 
         ZVec3 v = z.mulVector(light.l);
-        DrawCircle(v.x, v.y, v.z / 400, WHITE);
+        // DrawCircle(v.x, v.y, v.z / 400, WHITE);
+        renderer->drawPixel(v.x, v.y, ZYN_WHITE);
         v = z.mulVector(lightFixed.l);
-        DrawCircle(v.x, v.y, v.z / 400, WHITE);
+        renderer->drawPixel(v.x, v.y, ZYN_WHITE);
+        // DrawCircle(v.x, v.y, v.z / 400, WHITE);
     }
 };
 
 Test engine;
 
+void setup()
+{
+    engine.initialize(320, 480, 60);
+}
+
+void loop()
+{
+    engine.run();
+}
+
+#ifdef ZYNGINE_NATIVE_RAYLIB
 int main()
 {
-    if (engine.initialize(320, 480, 60))
-        engine.run();
+    setup();
+    loop();
 }
+#endif

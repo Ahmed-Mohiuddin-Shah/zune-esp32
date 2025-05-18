@@ -196,7 +196,8 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
             ZVec3i P = (ZVec3(A).add(ZVec3(B.sub(A)).mul(phi))).toZVec3i();
             ZVec2i uvP = uvA.add((uvB.sub(uvA)).mul(phi));
             float ityP = ityA + (ityB - ityA) * phi;
-            ityP = std::clamp(ityP, 0.1f, 1.0f);
+            // Clamp value between 0.1f and 1.0f (for pre-C++17)
+            ityP = (ityP < 0.1f) ? 0.1f : (ityP > 1.0f ? 1.0f : ityP);
             if (P.x >= screenWidth || P.y >= screenHeight || P.x < 0 || P.y < 0)
                 continue;
             if (getZBuffer(P.x, P.y) < P.z)
@@ -323,7 +324,12 @@ void ZynRenderer::drawTexture(ZynTexture texture, int x, int y)
     {
         int xp = i % texture.resolution;
         int yp = i / texture.resolution;
+#ifdef ZYNGINE_NATIVE_RAYLIB
         DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(xp, yp)));
+#endif
+#ifdef ZYNGINE_ESP32S3
+        currentFrame->drawPixel(xp + x, yp + y, texture.getPixel(xp, yp));
+#endif
     }
 }
 

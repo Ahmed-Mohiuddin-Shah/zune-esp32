@@ -1,4 +1,5 @@
 #include <zyngine.h>
+#include "zyndrivers.h"
 
 bool Zyngine::initialize(int width, int height, int targetFPS)
 {
@@ -10,8 +11,8 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
 
 #ifdef ZYNGINE_ESP32S3
     renderer = new ZynRenderer(screenWidth, screenHeight, new ParallelILI9486());
-    start_time = millis();
-    targetFrameTime = 1.0f / (float)targetFPS;
+    // start_time = millis();
+    // targetFrameTime = 1.0f / (float)targetFPS;
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
@@ -27,9 +28,9 @@ void Zyngine::run()
 #ifdef ZYNGINE_ESP32S3
     while (true)
     {
-        unsigned long current_time = millis();
-        float deltaTime = (float)(current_time - start_time) / 1000.0f;
-        start_time = current_time;
+        // unsigned long current_time = millis();
+        // float deltaTime = (float)(current_time - start_time) / 1000.0f;
+        // start_time = current_time;
 
         renderer->diffDraw();
     }

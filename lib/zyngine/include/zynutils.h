@@ -1,11 +1,15 @@
 #ifndef ZYNUTILS_H
 #define ZYNUTILS_H
 
+#ifdef ZYNGINE_NATIVE_RAYLIB
+#include <raylib.h>
+#endif
+
 #include <cstdint>
 #include <cstdio>
-#include <raylib.h>
 #include <zynmath.h>
 
+#ifdef ZYNGINE_NATIVE_RAYLIB
 inline Color getRaylibColorFromRGB565(uint16_t color)
 {
     return {static_cast<unsigned char>((color >> 11) * 255 / 31),
@@ -13,6 +17,7 @@ inline Color getRaylibColorFromRGB565(uint16_t color)
             static_cast<unsigned char>((color & 0x1F) * 255 / 31),
             255};
 }
+#endif
 
 inline uint16_t getIntensityRGB565(float intensity, uint16_t color)
 {
