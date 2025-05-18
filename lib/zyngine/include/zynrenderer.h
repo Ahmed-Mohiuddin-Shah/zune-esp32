@@ -13,7 +13,7 @@
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
-#include <raylib/raylib.h>
+#include <raylib.h>
 #include <cstdint>
 #endif
 

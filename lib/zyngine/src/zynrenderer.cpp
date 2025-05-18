@@ -1,4 +1,4 @@
-#include "ZynRenderer.h"
+#include "zynrenderer.h"
 #include <algorithm>
 #include <iostream>
 #include <vector>

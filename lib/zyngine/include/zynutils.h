@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <cstdio>
-#include <raylib/raylib.h>
+#include <raylib.h>
 #include <zynmath.h>
 
 inline Color getRaylibColorFromRGB565(uint16_t color)
