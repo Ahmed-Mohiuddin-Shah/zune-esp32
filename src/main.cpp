@@ -31,7 +31,7 @@ public:
         modelViewMatrix = camera.getLookAtMatrix();
         viewPortMatrix.toViewport(0, 0, screenWidth, screenHeight, depth);
         projectionMatrix = camera.getProjectionMatrix();
-        // model.loadModel("test", "./resources/optimized_assets/3d_models");
+        model.loadModel("test", "./resources/optimized_assets/3d_models");
         floor.loadModel("floor", "./resources/optimized_assets/3d_models");
 
         translationMat = translationMat.translate(1.0f, 1.0f, 0.0f);
@@ -86,8 +86,8 @@ public:
         translationMat = translationMat.rotate(rotate.x, rotate.y, rotate.z);
 
         ZynCamera cam = camera.copy();
-        // cam.eye = camera.eye.add(translation);
-        // cam.center = camera.center.add(translation);
+        cam.eye = camera.eye.add(translation);
+        cam.center = camera.center.add(translation);
         cam.eye = translationMat.mulVector(cam.eye);
         cam.center = translationMat.mulVector(cam.center);
         modelViewMatrix = cam.getLookAtMatrix();
