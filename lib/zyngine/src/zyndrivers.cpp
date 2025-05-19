@@ -38,7 +38,7 @@ ParallelILI9486::ParallelILI9486(void)
         cfg.panel_height = 480;              // 实际可见高度
         cfg.offset_x = 0;                    // 面板X方向偏移量
         cfg.offset_y = 0;                    // 面板Y方向偏移量
-        cfg.offset_rotation = 0;             // 旋转方向值的偏移0~7（4~7上下反转）
+        cfg.offset_rotation = 0;             // 0 and 2 for potrait and vice versa
         cfg.dummy_read_pixel = 8;            // 像素读取前虚拟读位数
         cfg.dummy_read_bits = 1;             // 读取非像素数据之前的虚拟读位数
         cfg.readable = true;                 // 可读取数据时设置为真
@@ -54,6 +54,17 @@ ParallelILI9486::ParallelILI9486(void)
 
     pinMode(2, OUTPUT);
     digitalWrite(2, HIGH);
+}
+
+bool initializeSDCard()
+{
+    SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+    if (!SD.begin(SD_CS))
+    {
+        printf("SD Card Mount Failed\n");
+        return false;
+    }
+    return true;
 }
 
 #endif

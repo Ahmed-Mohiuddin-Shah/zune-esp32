@@ -55,7 +55,7 @@ def process_images(input_folder, output_folder, optimized_image_size):
 
 
 if __name__ == "__main__":
-    optimized_image_size = (256, 256)
+    optimized_image_size = (64, 64)
     input_folder = "./original_assets/3d_models/textures"
     output_folder = "./optimized_assets/3d_models/textures"
     process_images(input_folder, output_folder, optimized_image_size)

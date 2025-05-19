@@ -2,12 +2,14 @@
 #define ZYNGINE_H
 
 #include <zynrenderer.h>
+#include "zyndrivers.h"
 
 class Zyngine
 {
 protected:
     int screenWidth;
     int screenHeight;
+    int start_time = 0;
     ZynRenderer *renderer;
 public:
     bool initialize(int screenWidth, int screenHeight, int targetFPS = 30);

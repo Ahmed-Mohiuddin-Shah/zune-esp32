@@ -13,7 +13,7 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *l
     lcd_display->begin();
     lcd_display->startWrite();
     lcd_display->setColorDepth(16);
-    lcd_display->setRotation(0); // Set rotation to 0 for portrait mode
+    lcd_display->setRotation(0);
 
     currentFrame = new LGFX_Sprite();
     previousFrame = new LGFX_Sprite();
@@ -200,7 +200,20 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
             ityP = (ityP < 0.1f) ? 0.1f : (ityP > 1.0f ? 1.0f : ityP);
             if (P.x >= screenWidth || P.y >= screenHeight || P.x < 0 || P.y < 0)
                 continue;
+            
+
+            // TODO WHY THE F*** IS THIS WORKING 
+            // TODO WHY IS LIKE THIS ON ESP32S3
+            // TODO AND RAYLIB
+            // TODO CHECK THIS
+            // TODO *!**&&!&!!?!*!**
+            #ifdef ZYNGINE_ESP32S3
+            if (getZBuffer(P.x, P.y) > P.z)
+            #endif
+            #ifdef ZYNGINE_NATIVE_RAYLIB
             if (getZBuffer(P.x, P.y) < P.z)
+            #endif
+
             {
                 setZBuffer(P.x, P.y, P.z);
                 drawPixel(P.x, P.y, getIntensityRGB565(ityP, texture->getPixel(uvP.x, uvP.y)));
@@ -250,7 +263,7 @@ void ZynRenderer::printText(int x, int y, const char *text, uint16_t backgroundC
 void ZynRenderer::drawPixel(int x, int y, uint16_t color)
 {
 #ifdef ZYNGINE_ESP32S3
-    currentFrame->drawPixel(x, y, color);
+    currentFrame->drawPixel(screenWidth-x , screenHeight-y, color);
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
@@ -382,6 +395,7 @@ void ZynRenderer::diffDraw()
         s32 += w32;
         p32 += w32;
     } while (++y < height);
+
     lcd_display->display();
 
     LGFX_Sprite *swap;

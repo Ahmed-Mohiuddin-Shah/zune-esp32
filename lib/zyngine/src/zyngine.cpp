@@ -1,5 +1,5 @@
 #include <zyngine.h>
-#include "zyndrivers.h"
+
 
 bool Zyngine::initialize(int width, int height, int targetFPS)
 {
@@ -28,10 +28,10 @@ void Zyngine::run()
 #ifdef ZYNGINE_ESP32S3
     while (true)
     {
-        // unsigned long current_time = millis();
-        // float deltaTime = (float)(current_time - start_time) / 1000.0f;
-        // start_time = current_time;
-
+        unsigned long current_time = millis();
+        float deltaTime = (float)(current_time - start_time) / 1000.0f;
+        start_time = current_time;
+        onUserUpdate(0.016f);
         renderer->diffDraw();
     }
 #endif

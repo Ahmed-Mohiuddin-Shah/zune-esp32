@@ -1,10 +1,9 @@
-// #include <Arduino.h>
-
 #include <zyngine.h>
 #include <zynmodel.h>
 #include <zynlight.h>
 #include <zyncamera.h>
 #include <zyntexture.h>
+#include <zyndrivers.h>
 #include <vector>
 
 class Test : public Zyngine
@@ -25,16 +24,34 @@ private:
     float far = -100.0f;
     int depth = 255;
 
+    #ifdef ZYNGINE_ESP32S3
+    ESP32Encoder encoder;
+    int axisToMove = 0;
+    #endif
+
 public:
     void onUserCreate() override
     {
+        
+        #ifdef ZYNGINE_ESP32S3
+        Serial.begin(115200);
+        // Serial.read();
+        // delay(2000);
+        initializeSDCard();
+
+        encoder.attachFullQuad(CLK, DT);
+        encoder.setCount(0);
+        pinMode(ENCODER_BUTTON, INPUT_PULLUP);
+        #endif
+
+
         light.l = ZVec3(0.0f, -0.5f, 0.1f).normalized();
         lightFixed.l = ZVec3(1.0f, 1.0f, 1.0f).normalized();
         modelViewMatrix = camera.getLookAtMatrix();
         viewPortMatrix.toViewport(0, 0, screenWidth, screenHeight, depth);
         projectionMatrix = camera.getProjectionMatrix();
-        model.loadModel("test", "./resources/optimized_assets/3d_models");
-        floor.loadModel("floor", "./resources/optimized_assets/3d_models");
+        model.loadModel("test", "resources/optimized_assets/3d_models");
+        floor.loadModel("floor", "resources/optimized_assets/3d_models");
 
         translationMat = translationMat.translate(1.0f, 1.0f, 0.0f);
         for (int i = 0; i < model.mesh.tris.size(); i++)
@@ -46,26 +63,80 @@ public:
         translationMat.reset();
 
         z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
+        printf("Camera position: %f %f %f\n", camera.eye.x, camera.eye.y, camera.eye.z);
     }
 
     void onUserUpdate(float deltaTime) override
     {
+        // printf("FPS: %f\n", 1.0f / deltaTime);
         // Handle keyboard input for model movement
-        ZVec3 translation(0.0f, 0.0f, 0.0f);
+        ZVec3 translation(0.0f, 0.0f, 0.0f);    
         float moveSpeed = 5.0f * deltaTime;
 
-        // if (IsKeyDown(KEY_W))
-        //     translation.y += moveSpeed; // Move up
-        // if (IsKeyDown(KEY_S))
-        //     translation.y -= moveSpeed; // Move down
-        // if (IsKeyDown(KEY_A))
-        //     translation.x -= moveSpeed; // Move left
-        // if (IsKeyDown(KEY_D))
-        //     translation.x += moveSpeed; // Move right
-        // if (IsKeyDown(KEY_Q))
-        //     translation.z -= moveSpeed; // Move forward
-        // if (IsKeyDown(KEY_E))
-        //     translation.z += moveSpeed; // Move backward
+        #ifdef ZYNGINE_NATIVE_RAYLIB
+        if (IsKeyDown(KEY_W))
+            translation.y += moveSpeed; // Move up
+        if (IsKeyDown(KEY_S))
+            translation.y -= moveSpeed; // Move down
+        if (IsKeyDown(KEY_A))
+            translation.x -= moveSpeed; // Move left
+        if (IsKeyDown(KEY_D))
+            translation.x += moveSpeed; // Move right
+        if (IsKeyDown(KEY_Q))
+            translation.z -= moveSpeed; // Move forward
+        if (IsKeyDown(KEY_E))
+            translation.z += moveSpeed; // Move backward
+        #endif
+
+        #ifdef ZYNGINE_ESP32S3
+        // Using encoder for input
+        int encoderValue = encoder.getCount();
+        if (axisToMove == 0) // X axis
+        {
+            if (encoderValue > 0)
+            {
+                translation.x += moveSpeed; // Move right
+                encoder.setCount(0);
+            }
+            else if (encoderValue < 0)
+            {
+                translation.x -= moveSpeed; // Move left
+                encoder.setCount(0);
+            }
+        }
+        else if (axisToMove == 1) // Y axis
+        {
+            if (encoderValue > 0)
+            {
+                translation.y += moveSpeed; // Move up
+                encoder.setCount(0);
+            }
+            else if (encoderValue < 0)
+            {
+                translation.y -= moveSpeed; // Move down
+                encoder.setCount(0);
+            }
+        }
+        else if (axisToMove == 2) // Z axis
+        {
+            if (encoderValue > 0)
+            {
+                translation.z += moveSpeed; // Move forward
+                encoder.setCount(0);
+            }
+            else if (encoderValue < 0)
+            {
+                translation.z -= moveSpeed; // Move backward
+                encoder.setCount(0);
+            }
+        }
+        // Handle encoder button press
+        if (digitalRead(ENCODER_BUTTON) == LOW)
+        {
+            axisToMove = (axisToMove + 1) % 3; // Cycle through axes
+            encoder.setCount(0);
+        }
+        #endif
 
         // Update the translation matrix
         translationMat = translationMat.translate(translation.x, translation.y, translation.z);
@@ -79,6 +150,8 @@ public:
         // cam.center = camera.center.add(translation);
         cam.eye = translationMat.mulVector(cam.eye);
         cam.center = translationMat.mulVector(cam.center);
+        // near = cam.center.z;
+        // printf("Camera position: %f %f %f\n", cam.center.x, cam.center.y, cam.center.z);
         modelViewMatrix = cam.getLookAtMatrix();
 
         z = viewPortMatrix.mulMatrix(projectionMatrix.mulMatrix(modelViewMatrix));
@@ -95,7 +168,7 @@ public:
             for (int j = 0; j < 3; j++)
             {
                 ZVec4 v(triangle.v[j]);
-                v = translationMat.mulVector(v);
+                // v = translationMat.mulVector(v);
                 worldCoords[j] = v.toZVec3();
                 ZVec3 n = translationMat.mulVector(triangle.n[j]).normalized();
 
@@ -128,11 +201,11 @@ public:
             renderer->renderTexturedTriangle(screenCoords, triangle.t, intensities, &floor.diffuseMap);
         }
 
-        ZVec3 v = z.mulVector(light.l);
+        // ZVec3 v = z.mulVector(light.l);
         // DrawCircle(v.x, v.y, v.z / 400, WHITE);
-        renderer->drawPixel(v.x, v.y, ZYN_WHITE);
-        v = z.mulVector(lightFixed.l);
-        renderer->drawPixel(v.x, v.y, ZYN_WHITE);
+        renderer->drawPixel(light.l.x, light.l.y, ZYN_WHITE);
+        // v = z.mulVector(lightFixed.l);
+        renderer->drawPixel(lightFixed.l.x, lightFixed.l.y, ZYN_WHITE);
         // DrawCircle(v.x, v.y, v.z / 400, WHITE);
     }
 };

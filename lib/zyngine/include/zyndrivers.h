@@ -1,9 +1,16 @@
 #ifndef DEVICEDRIVERS_H
 #define DEVICEDRIVERS_H
 
+#include "config_user.h"
+
 #ifdef ZYNGINE_ESP32S3
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <Wire.h>
+#include <SPI.h>
+#include "FS.h"
+#include "SD.h"
+#include "SPI.h"
 
 class ParallelILI9486 : public lgfx::LGFX_Device
 {
@@ -14,6 +21,9 @@ private:
 public:
     ParallelILI9486(void);
 };
+
+bool initializeSDCard();
+
 #endif
 
 #endif
