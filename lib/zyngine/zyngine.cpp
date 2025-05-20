@@ -39,6 +39,8 @@ void Zyngine::run()
 #endif
         {
 
+        gui.getInputs();
+
 #ifdef ZYNGINE_ESP32S3
 
             unsigned long current_time = millis();

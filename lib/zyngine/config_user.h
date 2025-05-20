@@ -32,7 +32,7 @@
 #ifdef ZYNGINE_ESP32S3
 #include <Arduino.h>
 
-// #include "ps2.h"
+#include "ps2.h"
 // #include "Audio.h"
 // #include "RTClib.h"
 // // #include "helpers.h"
@@ -51,6 +51,10 @@
 #define CLK 18 // CLK ENCODER
 #define DT 17  // DT ENCODER
 #define ENCODER_BUTTON 43
+
+// PS2 Mouse
+#define MOUSE_CLK 45
+#define MOUSE_DATA 38
 
 // SD CARD PINS
 #define SD_SCK 36
@@ -82,10 +86,6 @@
 // // I2C Devices
 // RTC_DS1307 rtc;
 // Adafruit_MPU6050 mpu;
-// TouchScreen ts = TouchScreen(XP, YP, XM, YM, 240);
-// TSPoint p;
-// // clk, data
-// PS2 mouse(45, 38);
 
 // TaskHandle_t Task1;
 

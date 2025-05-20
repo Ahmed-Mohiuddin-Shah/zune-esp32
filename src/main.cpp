@@ -5,10 +5,12 @@ class WaterSim : public Zyngine
 protected:
     void onUserCreate() override
     {
+        Serial.begin(115200);
     }
 
     void onUserUpdate(float deltaTime) override
     {
+        renderer->clear(ZYN_BLACK);
     }
 };
 

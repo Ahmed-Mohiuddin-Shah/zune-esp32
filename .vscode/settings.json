@@ -288,7 +288,10 @@
     "C:/Users/mohiu/.platformio/packages/framework-arduinoespressif32/libraries/WiFiProv/src",
     ""
   ],
-  "C_Cpp_Runner.includeSearch": ["*", "**/*"],
+  "C_Cpp_Runner.includeSearch": [
+    "*",
+    "**/*"
+  ],
   "C_Cpp_Runner.excludeSearch": [
     "**/build",
     "**/build/**",

@@ -2,6 +2,7 @@
 #define ZYNGUI_H
 
 #include "zynrenderer.h"
+#include "zyndrivers.h"
 #include "zynmath.h"
 
 class ZynGUI
@@ -15,8 +16,64 @@ private:
     int screenWidth;
     int screenHeight;
     int lockScreenSlidePosition = 0;
+    bool shouldLockScreenMove = false;
+    bool lockScreenMoveDirection = false; // * false for up
+    int batteryValue;
+    float battPercentage;
+
+    PS2 mouse = PS2(MOUSE_CLK, MOUSE_DATA);
+
+    void mouseInit()
+    {
+        mouse.write(0xff); // reset
+        mouse.read();      // ack byte
+        mouse.read();      // blank */
+        mouse.read();      // blank */
+        mouse.write(0xf0); // remote mode
+        mouse.read();      // ack
+        delayMicroseconds(100);
+    }
+
+    ZVec2i readMouse()
+    {
+        /* get a reading from the mouse */
+        mouse.write(0xeb); // give me data!
+        mouse.read();      // ignore ack
+        uint8_t mstat = mouse.read();
+        int8_t mx = mouse.read();
+        int8_t my = mouse.read();
+
+        // Update cursor position
+        // * My mouse is in potrait mode
+        cursorPos.x -= my;
+        cursorPos.y -= mx; // Usually mouse Y is inverted
+
+        // Clamp cursor position to screen bounds
+        if (cursorPos.x < 0)
+            cursorPos.x = 0;
+        if (cursorPos.x >= screenWidth)
+            cursorPos.x = screenWidth - 1;
+        if (cursorPos.y < 0)
+            cursorPos.y = 0;
+        if (cursorPos.y >= screenHeight)
+            cursorPos.y = screenHeight - 1;
+
+        return cursorPos;
+    }
 
 public:
+    ZynGUI()
+    {
+        pinMode(HOME_BUTTON, INPUT_PULLUP);
+        pinMode(POWER_BUTTON, INPUT_PULLUP);
+        pinMode(ENCODER_BUTTON, INPUT_PULLUP);
+
+        pinMode(BATTERY_SENSE, INPUT);
+        adcAttachPin(BATTERY_SENSE);
+
+        mouseInit();
+    }
+
     void passRenderer(ZynRenderer *renderer)
     {
         this->renderer = renderer;
@@ -85,15 +142,15 @@ public:
     // }
 
     //
-    void drawBatteryStatus(int x, int y, int height, float percent, int status)
+    void drawBatteryStatus(int x, int y, int height)
     {
 
         uint16_t color = ZYN_RED;
-        if (status == 0)
+        if (battPercentage < 30)
         {
             color = ZYN_RED;
         }
-        else if (status == 2)
+        else if (battPercentage < 80)
         {
             color = ZYN_WHITE;
         }
@@ -101,11 +158,6 @@ public:
         {
             color = ZYN_GREEN;
         }
-        // Clamp percent between 0 and 100
-        if (percent < 0.0f)
-            percent = 0.0f;
-        if (percent > 100.0f)
-            percent = 100.0f;
 
         int width = 2 * height;      // Width of the battery
         int halfHeight = height / 2; // Half of the height
@@ -117,24 +169,40 @@ public:
         renderer->fillRect((x + 2 * tabWidth), y + tabWidth, width - 2 * tabWidth, height - 2 * tabWidth, ZYN_BLACK);
 
         // Calculate width of battery bar
-        int barWidth = (int)((width - 4 * tabWidth) * (percent / 100.0f));
+        int barWidth = (int)((width - 4 * tabWidth) * (battPercentage / 100.0f));
         // Draw the battery bar from right to left (opposite direction)
         renderer->fillRect(x + width - barWidth - tabWidth, y + 2 * tabWidth, barWidth, halfHeight / 2, color);
     }
 
-    void drawCursor(int x, int y) {
-        // Draw a small circle at the cursor position
-        renderer->drawLine(x - 5, y, x + 5, y, ZYN_BLACK);
-        renderer->drawLine(x, y - 5, x, y + 5, ZYN_BLACK);
-        renderer->drawLine(x - 5, y - 5, x + 5, y + 5, ZYN_BLACK);
-        renderer->drawLine(x - 5, y + 5, x + 5, y - 5, ZYN_BLACK);
+    void drawCursor(int x, int y)
+    {
+        // Draw a small square
+        renderer->fillRect(cursorPos.x, cursorPos.y, 10, 10, ZYN_RED);
     }
 
     void lockScreen()
     {
+
+        if (shouldLockScreenMove)
+        {
+            lockScreenSlidePosition += lockScreenMoveDirection ? 50 : -50;
+            if (lockScreenSlidePosition > screenHeight)
+            {
+                shouldLockScreenMove = false;
+                lockScreenMoveDirection = !lockScreenMoveDirection;
+                lockScreenSlidePosition = screenHeight;
+            }
+            else if (lockScreenSlidePosition < 0)
+            {
+                shouldLockScreenMove = false;
+                lockScreenMoveDirection = !lockScreenMoveDirection;
+                lockScreenSlidePosition = 0;
+            }
+        }
+
         // Draw the wallpaper
         renderer->drawTextureToBox(&wallpaper, 0, lockScreenSlidePosition, screenWidth, screenHeight);
-        drawBatteryStatus((screenWidth - 40), lockScreenSlidePosition + (screenHeight - 20), 16, 100.0f, 1);
+        drawBatteryStatus((screenWidth - 40), lockScreenSlidePosition + (screenHeight - 20), 16);
 
         // Display the Current Time at bottom right corner above the white bar
         char timeString[10];
@@ -144,6 +212,23 @@ public:
         // Draw a small white bar at the bottom of the screen with a up arrow in center
         renderer->fillRect(0, lockScreenSlidePosition, screenWidth, 20, ZYN_WHITE);
         renderer->fillTriangle((screenWidth / 2) - 10, lockScreenSlidePosition + 15, (screenWidth / 2) + 10, lockScreenSlidePosition + 15, (screenWidth / 2), lockScreenSlidePosition + 5, ZYN_BLACK);
+    }
+
+    void getInputs()
+    {
+        readMouse();
+
+        if (!digitalRead(HOME_BUTTON))
+        {
+            shouldLockScreenMove = true;
+        }
+
+        batteryValue = analogRead(BATTERY_SENSE);
+        battPercentage = ((float)(batteryValue - 2818) / (3470 - 2818)) * 100.0f;
+        if (battPercentage < 0.0f)
+            battPercentage = 0.0f;
+        if (battPercentage > 100.0f)
+            battPercentage = 100.0f;
     }
 
     void update()

@@ -22,9 +22,9 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *l
     previousFrame = new LGFX_Sprite();
 
     currentFrame->setTextSize(2);
-    currentFrame->setColorDepth(16);
+    currentFrame->setColorDepth(8);
     previousFrame->setTextSize(2);
-    previousFrame->setColorDepth(16);
+    previousFrame->setColorDepth(8);
 
     currentFrame->setPsram(true);
     currentFrame->createSprite(screenWidth, screenHeight);
@@ -419,64 +419,61 @@ void ZynRenderer::diffDraw()
 {
     union
     {
-        std::uint16_t *s16;
+        std::uint32_t *s32;
         std::uint8_t *s;
     };
     union
     {
-        std::uint16_t *p16;
+        std::uint32_t *p32;
         std::uint8_t *p;
     };
-    s16 = (std::uint16_t *)currentFrame->getBuffer();
-    p16 = (std::uint16_t *)previousFrame->getBuffer();
+    s32 = (std::uint32_t *)currentFrame->getBuffer();
+    p32 = (std::uint32_t *)previousFrame->getBuffer();
 
     auto width = currentFrame->width();
     auto height = currentFrame->height();
 
-    auto w16 = width; // number of 16-bit pixels per row
+    auto w32 = (width + 3) >> 2;
     std::int32_t y = 0;
     do
     {
-        std::int32_t x16 = 0;
+        std::int32_t x32 = 0;
         do
         {
-            while (x16 < w16 && s16[x16] == p16[x16])
-                ++x16;
-            if (x16 == w16)
+            while (s32[x32] == p32[x32] && ++x32 < w32)
+                ;
+            if (x32 == w32)
                 break;
 
-            std::int32_t xs = x16;
-            while (xs < w16 && s16[xs] == p16[xs])
+            std::int32_t xs = x32 << 2;
+            while (s[xs] == p[xs])
                 ++xs;
 
-            while (x16 < w16 && s16[x16] != p16[x16])
-                ++x16;
+            while (++x32 < w32 && s32[x32] != p32[x32])
+                ;
 
-            std::int32_t xe = x16 - 1;
+            std::int32_t xe = (x32 << 2) - 1;
             if (xe >= width)
                 xe = width - 1;
-            while (xe >= 0 && s16[xe] == p16[xe])
+            while (s[xe] == p[xe])
                 --xe;
-
-            if (xe < xs)
-                continue;
 
             // Calculate inverted x positions
             std::int32_t inverted_xs = width - 1 - xe;
             std::int32_t inverted_xe = width - 1 - xs;
             std::int32_t segment_width = xe - xs + 1;
 
-            // Create temporary buffer for inverted segment (16-bit color)
-            std::vector<uint16_t> inverted_segment(segment_width);
+            // Create temporary buffer for inverted segment
+            uint8_t inverted_segment[segment_width];
             for (int i = 0; i < segment_width; i++)
             {
-                inverted_segment[i] = s16[xs + (segment_width - 1 - i)];
+                inverted_segment[i] = s[xs + (segment_width - 1 - i)];
             }
 
-            lcd_display->pushImage(inverted_xs, y, segment_width, 1, inverted_segment.data());
-        } while (x16 < w16);
-        s16 += w16;
-        p16 += w16;
+            lcd_display->pushImage(inverted_xs, y, segment_width, 1, inverted_segment);
+        } while (x32 < w32);
+        s32 += w32;
+        p32 += w32;
     } while (++y < height);
 
     lcd_display->display();
