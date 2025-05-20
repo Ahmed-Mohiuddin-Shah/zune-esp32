@@ -2,11 +2,16 @@
 #define ZYNGUI_H
 
 #include "zynrenderer.h"
+#include "zynmath.h"
 
 class ZynGUI
 {
 private:
     ZynRenderer *renderer;
+    ZynTexture wallpaper;
+
+    ZVec2i cursorPos;
+
     int screenWidth;
     int screenHeight;
     int lockScreenSlidePosition = 0;
@@ -17,6 +22,7 @@ public:
         this->renderer = renderer;
         screenWidth = renderer->getScreenWidth();
         screenHeight = renderer->getScreenHeight();
+        wallpaper.loadFromFile("/resources/optimized_assets/wallpapers/Bluey Shadownlands Wallpaper (Mobile).zyntex");
     }
     // // Helper to interpolate between two colors
     // Color lerpColor(Color a, Color b, float t)
@@ -78,7 +84,7 @@ public:
     //     }
     // }
 
-    // 
+    //
     void drawBatteryStatus(int x, int y, int height, float percent, int status)
     {
 
@@ -116,8 +122,34 @@ public:
         renderer->fillRect(x + width - barWidth - tabWidth, y + 2 * tabWidth, barWidth, halfHeight / 2, color);
     }
 
-    void update() {
-        drawBatteryStatus(screenWidth - 40, screenHeight - 20, 16, 100.0f, 1);
+    void drawCursor(int x, int y) {
+        // Draw a small circle at the cursor position
+        renderer->drawLine(x - 5, y, x + 5, y, ZYN_BLACK);
+        renderer->drawLine(x, y - 5, x, y + 5, ZYN_BLACK);
+        renderer->drawLine(x - 5, y - 5, x + 5, y + 5, ZYN_BLACK);
+        renderer->drawLine(x - 5, y + 5, x + 5, y - 5, ZYN_BLACK);
+    }
+
+    void lockScreen()
+    {
+        // Draw the wallpaper
+        renderer->drawTextureToBox(&wallpaper, 0, lockScreenSlidePosition, screenWidth, screenHeight);
+        drawBatteryStatus((screenWidth - 40), lockScreenSlidePosition + (screenHeight - 20), 16, 100.0f, 1);
+
+        // Display the Current Time at bottom right corner above the white bar
+        char timeString[10];
+        snprintf(timeString, sizeof(timeString), "%02d:%02d", 12, 34);
+        renderer->printText(screenWidth - 40, lockScreenSlidePosition + (20), timeString, 30, ZYN_BLACK, ZYN_WHITE);
+
+        // Draw a small white bar at the bottom of the screen with a up arrow in center
+        renderer->fillRect(0, lockScreenSlidePosition, screenWidth, 20, ZYN_WHITE);
+        renderer->fillTriangle((screenWidth / 2) - 10, lockScreenSlidePosition + 15, (screenWidth / 2) + 10, lockScreenSlidePosition + 15, (screenWidth / 2), lockScreenSlidePosition + 5, ZYN_BLACK);
+    }
+
+    void update()
+    {
+        lockScreen();
+        drawCursor(cursorPos.x, cursorPos.y);
     }
 };
 

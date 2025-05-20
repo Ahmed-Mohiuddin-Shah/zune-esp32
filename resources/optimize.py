@@ -54,8 +54,8 @@ def process_images(input_folder, output_folder, optimized_image_size):
             save_as_zyntex(output_path, width, height, rgb565_data)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":    
     optimized_image_size = (64, 64)
-    input_folder = "./original_assets/3d_models/textures"
-    output_folder = "./optimized_assets/3d_models/textures"
+    input_folder = "./original_assets/wallpapers"
+    output_folder = "./optimized_assets/wallpapers"
     process_images(input_folder, output_folder, optimized_image_size)

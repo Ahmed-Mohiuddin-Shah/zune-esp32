@@ -13,11 +13,21 @@ struct ZynTexture
     uint16_t bufferLength = ZYNTEX_MAX_RESOLUTION * ZYNTEX_MAX_RESOLUTION;
     uint16_t resolution = ZYNTEX_MAX_RESOLUTION;
 
+    ZynTexture()
+    {
+        // Initialize the pixel buffer to transparent black
+        for (int i = 0; i < bufferLength; i++)
+        {
+            pixels[i] = ZYN_BLACK;
+        }
+    }
+
     bool
-    loadFromFile(const char *fileName)
+    loadFromFile(const char *fileName, bool overrideSize = false)
     {
 #ifdef ZYNGINE_NATIVE_RAYLIB
         FILE *file = fopen(fileName, "r");
+        printf("Loading texture from file: %s\n", fileName);
 
         if (!file)
         {

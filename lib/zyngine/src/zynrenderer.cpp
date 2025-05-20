@@ -22,9 +22,9 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *l
     previousFrame = new LGFX_Sprite();
 
     currentFrame->setTextSize(2);
-    currentFrame->setColorDepth(8);
+    currentFrame->setColorDepth(16);
     previousFrame->setTextSize(2);
-    previousFrame->setColorDepth(8);
+    previousFrame->setColorDepth(16);
 
     currentFrame->setPsram(true);
     currentFrame->createSprite(screenWidth, screenHeight);
@@ -261,6 +261,19 @@ void ZynRenderer::printText(int x, int y, const char *text, uint16_t backgroundC
 #endif
 }
 
+void ZynRenderer::printText(int x, int y, const char *text, int size, uint16_t backgroundColor, uint16_t textColor)
+{
+#ifdef ZYNGINE_ESP32S3
+    currentFrame->setCursor(x, y, 2);
+    currentFrame->setTextColor(backgroundColor, textColor);
+    currentFrame->setTextSize(size);
+    currentFrame->print(text);
+#endif
+#ifdef ZYNGINE_NATIVE_RAYLIB
+    DrawText(text, x, y, size, getRaylibColorFromRGB565(textColor));
+#endif
+}
+
 void ZynRenderer::drawPixel(int x, int y, uint16_t color)
 {
 #ifdef ZYNGINE_ESP32S3
@@ -347,66 +360,123 @@ void ZynRenderer::drawTexture(ZynTexture *texture, int x, int y)
     }
 }
 
+void ZynRenderer::drawTexture(ZynTexture *texture, int x, int y, float scaleX, float scaleY)
+{
+    // using only getPixel of Zyntexture and drawPixel of renderer
+    int scaledWidth = (int)(texture->resolution * scaleX);
+    int scaledHeight = (int)(texture->resolution * scaleY);
+    for (int yp = 0; yp < scaledHeight; yp++)
+    {
+        for (int xp = 0; xp < scaledWidth; xp++)
+        {
+            // Nearest neighbor sampling
+            int src_x = (int)(xp / scaleX);
+            int src_y = (int)(yp / scaleY);
+            if (src_x >= texture->resolution)
+                src_x = texture->resolution - 1;
+            if (src_y >= texture->resolution)
+                src_y = texture->resolution - 1;
+#ifdef ZYNGINE_NATIVE_RAYLIB
+            DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture->getPixel(src_x, src_y)));
+#endif
+#ifdef ZYNGINE_ESP32S3
+            drawPixel(xp + x, yp + y, texture->getPixel(src_x, src_y));
+#endif
+        }
+    }
+}
+
+void ZynRenderer::drawTextureToBox(ZynTexture *texture, int x, int y, int fitWidth, int fitHeight)
+{
+    // using only getPixel of Zyntexture and drawPixel of renderer
+    float scaleX = (float)fitWidth / texture->resolution;
+    float scaleY = (float)fitHeight / texture->resolution;
+    int scaledWidth = (int)(texture->resolution * scaleX);
+    int scaledHeight = (int)(texture->resolution * scaleY);
+    for (int yp = 0; yp < scaledHeight; yp++)
+    {
+        for (int xp = 0; xp < scaledWidth; xp++)
+        {
+            // Nearest neighbor sampling
+            int src_x = (int)(xp / scaleX);
+            int src_y = (int)(yp / scaleY);
+            if (src_x >= texture->resolution)
+                src_x = texture->resolution - 1;
+            if (src_y >= texture->resolution)
+                src_y = texture->resolution - 1;
+#ifdef ZYNGINE_NATIVE_RAYLIB
+            DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture->getPixel(src_x, src_y)));
+#endif
+#ifdef ZYNGINE_ESP32S3
+            drawPixel(xp + x, yp + y, texture->getPixel(src_x, src_y));
+#endif
+        }
+    }
+}
+
 #ifdef ZYNGINE_ESP32S3
 void ZynRenderer::diffDraw()
 {
     union
     {
-        std::uint32_t *s32;
+        std::uint16_t *s16;
         std::uint8_t *s;
     };
     union
     {
-        std::uint32_t *p32;
+        std::uint16_t *p16;
         std::uint8_t *p;
     };
-    s32 = (std::uint32_t *)currentFrame->getBuffer();
-    p32 = (std::uint32_t *)previousFrame->getBuffer();
+    s16 = (std::uint16_t *)currentFrame->getBuffer();
+    p16 = (std::uint16_t *)previousFrame->getBuffer();
 
     auto width = currentFrame->width();
     auto height = currentFrame->height();
 
-    auto w32 = (width + 3) >> 2;
+    auto w16 = width; // number of 16-bit pixels per row
     std::int32_t y = 0;
     do
     {
-        std::int32_t x32 = 0;
+        std::int32_t x16 = 0;
         do
         {
-            while (s32[x32] == p32[x32] && ++x32 < w32)
-                ;
-            if (x32 == w32)
+            while (x16 < w16 && s16[x16] == p16[x16])
+                ++x16;
+            if (x16 == w16)
                 break;
 
-            std::int32_t xs = x32 << 2;
-            while (s[xs] == p[xs])
+            std::int32_t xs = x16;
+            while (xs < w16 && s16[xs] == p16[xs])
                 ++xs;
 
-            while (++x32 < w32 && s32[x32] != p32[x32])
-                ;
+            while (x16 < w16 && s16[x16] != p16[x16])
+                ++x16;
 
-            std::int32_t xe = (x32 << 2) - 1;
+            std::int32_t xe = x16 - 1;
             if (xe >= width)
                 xe = width - 1;
-            while (s[xe] == p[xe])
+            while (xe >= 0 && s16[xe] == p16[xe])
                 --xe;
+
+            if (xe < xs)
+                continue;
 
             // Calculate inverted x positions
             std::int32_t inverted_xs = width - 1 - xe;
             std::int32_t inverted_xe = width - 1 - xs;
             std::int32_t segment_width = xe - xs + 1;
 
-            // Create temporary buffer for inverted segment
-            uint8_t inverted_segment[segment_width];
+            // Create temporary buffer for inverted segment (16-bit color)
+            std::vector<uint16_t> inverted_segment(segment_width);
             for (int i = 0; i < segment_width; i++)
             {
-                inverted_segment[i] = s[xs + (segment_width - 1 - i)];
+                inverted_segment[i] = s16[xs + (segment_width - 1 - i)];
             }
 
-            lcd_display->pushImage(inverted_xs, y, segment_width, 1, inverted_segment);
-        } while (x32 < w32);
-        s32 += w32;
-        p32 += w32;
+            lcd_display->pushImage(inverted_xs, y, segment_width, 1, inverted_segment.data());
+        } while (x16 < w16);
+        s16 += w16;
+        p16 += w16;
     } while (++y < height);
 
     lcd_display->display();
@@ -415,5 +485,15 @@ void ZynRenderer::diffDraw()
     swap = currentFrame;
     currentFrame = previousFrame;
     previousFrame = swap;
+}
+
+void ZynRenderer::readTouch()
+{
+    p = ts.getPoint();
+    pinMode(YP, OUTPUT);
+    pinMode(XM, OUTPUT);
+    pinMode(YM, OUTPUT);
+    pinMode(XP, OUTPUT);
+    
 }
 #endif

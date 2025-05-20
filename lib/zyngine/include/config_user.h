@@ -18,11 +18,11 @@
 
 // Ensure only One Target System is defined
 
-// #define ZYNGINE_ESP32S3
-#define ZYNGINE_NATIVE_RAYLIB
+#define ZYNGINE_ESP32S3
+// #define ZYNGINE_NATIVE_RAYLIB
 
 // .zyntex resolution
-#define ZYNTEX_MAX_RESOLUTION 64
+#define ZYNTEX_MAX_RESOLUTION 64 // for now, 64x64 is the max resolution as it is working the best
 
 
 // =======================================
@@ -39,7 +39,6 @@
 // #include "AudioTools.h"
 #include "ESP32Encoder.h"
 // #include <driver/i2s.h>
-// #include <TouchScreen.h>
 // #include <Adafruit_Sensor.h>
 // #include <Adafruit_MPU6050.h>
 
@@ -59,10 +58,10 @@
 #define SD_MOSI 35
 #define SD_CS 39
 
-// #define YP 14 // must be an analog pin, use "An" notation!
-// #define XM 13 // must be an analog pin, use "An" notation!
-// #define YM 5  // can be a digital pin
-// #define XP 4  // can be a digital pin
+#define YP 14 // must be an analog pin, use "An" notation!
+#define XM 13 // must be an analog pin, use "An" notation!
+#define YM 5  // can be a digital pin
+#define XP 4  // can be a digital pin
 // // I2S Connections for Speaker
 // #define I2S_DOUT 40
 // #define I2S_BCLK 41

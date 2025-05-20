@@ -10,6 +10,7 @@
 
 #ifdef ZYNGINE_ESP32S3
 #include <LovyanGFX.hpp>
+#include <TouchScreen.h>
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
@@ -29,6 +30,8 @@ private:
     lgfx::LGFX_Device *lcd_display;
     LGFX_Sprite *previousFrame;
     LGFX_Sprite *currentFrame;
+
+    TouchScreen ts = TouchScreen(XP, YP, XM, YM, 240);
 #endif
 #ifdef ZYNGINE_NATIVE_RAYLIB
 #endif
@@ -60,6 +63,8 @@ public:
     ZynRenderer(int screenWidth, int screenHeight);
 #endif
 #ifdef ZYNGINE_ESP32S3
+    TSPoint p;
+
     ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *lcd_display);
     void diffDraw();
 #endif
@@ -72,6 +77,7 @@ public:
     void renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *intensities, ZynTexture *texture);
     void clear(uint16_t clearColor);
     void printText(int x, int y, const char *text, uint16_t backgroundColor, uint16_t textColor);
+    void printText(int x, int y, const char *text, int size, uint16_t backgroundColor, uint16_t textColor);
     void renderPixel(ZVec3 p, ZVec3 c);
     void renderSphere(ZVec3 pos, uint16_t color);
     void drawPixel(int x, int y, uint16_t color);
@@ -81,6 +87,9 @@ public:
     void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
     void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
     void drawTexture(ZynTexture *texture, int x, int y); // TODO chack to see is alpha value possible
+    void drawTexture(ZynTexture *texture, int x, int y, float scaleX, float scaleY);
+    void drawTextureToBox(ZynTexture *texture, int x, int y, int fitWidth, int fitHeight);
+    void readTouch();
 };
 
 #endif

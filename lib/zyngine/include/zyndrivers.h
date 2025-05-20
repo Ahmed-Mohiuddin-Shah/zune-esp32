@@ -19,7 +19,7 @@ private:
     lgfx::Bus_Parallel8 _bus_instance; // 8位并行总线实例（仅限ESP32）
 
 public:
-    ParallelILI9486(void);
+    ParallelILI9486();
 };
 
 bool initializeSDCard();

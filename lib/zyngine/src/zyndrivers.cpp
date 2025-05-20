@@ -54,6 +54,8 @@ ParallelILI9486::ParallelILI9486(void)
 
     pinMode(2, OUTPUT);
     digitalWrite(2, HIGH);
+
+    
 }
 
 bool initializeSDCard()
