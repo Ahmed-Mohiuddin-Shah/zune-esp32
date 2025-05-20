@@ -10,10 +10,13 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *l
     this->screenHeight = screenHeight;
     this->lcd_display = lcd_display;
 
+    zDepthBufferLength = screenWidth * screenHeight;
+    zDepthBuffer = new float[zDepthBufferLength];
+
     lcd_display->begin();
     lcd_display->startWrite();
     lcd_display->setColorDepth(16);
-    lcd_display->setRotation(0);
+    lcd_display->setRotation(2);
 
     currentFrame = new LGFX_Sprite();
     previousFrame = new LGFX_Sprite();
@@ -44,6 +47,16 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight)
     this->frame = LoadRenderTexture(screenWidth, screenHeight);
 }
 #endif
+
+int ZynRenderer::getScreenHeight()
+{
+    return screenHeight;
+}
+
+int ZynRenderer::getScreenWidth()
+{
+    return screenWidth;
+}
 
 ZVec3 ZynRenderer::barycentricCoordinate(ZVec3 *pts, ZVec3 P)
 {
@@ -200,20 +213,8 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
             ityP = (ityP < 0.1f) ? 0.1f : (ityP > 1.0f ? 1.0f : ityP);
             if (P.x >= screenWidth || P.y >= screenHeight || P.x < 0 || P.y < 0)
                 continue;
-            
 
-            // TODO WHY THE F*** IS THIS WORKING 
-            // TODO WHY IS LIKE THIS ON ESP32S3
-            // TODO AND RAYLIB
-            // TODO CHECK THIS
-            // TODO *!**&&!&!!?!*!**
-            #ifdef ZYNGINE_ESP32S3
-            if (getZBuffer(P.x, P.y) > P.z)
-            #endif
-            #ifdef ZYNGINE_NATIVE_RAYLIB
             if (getZBuffer(P.x, P.y) < P.z)
-            #endif
-
             {
                 setZBuffer(P.x, P.y, P.z);
                 drawPixel(P.x, P.y, getIntensityRGB565(ityP, texture->getPixel(uvP.x, uvP.y)));
@@ -263,7 +264,7 @@ void ZynRenderer::printText(int x, int y, const char *text, uint16_t backgroundC
 void ZynRenderer::drawPixel(int x, int y, uint16_t color)
 {
 #ifdef ZYNGINE_ESP32S3
-    currentFrame->drawPixel(screenWidth-x , screenHeight-y, color);
+    currentFrame->drawPixel(x, y, color);
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
@@ -274,7 +275,7 @@ void ZynRenderer::drawPixel(int x, int y, uint16_t color)
 void ZynRenderer::drawLine(int x1, int y1, int x2, int y2, uint16_t color)
 {
 #ifdef ZYNGINE_ESP32S3
-    currentFrame->drawLine(x1, y2, x2, y2, color);
+    currentFrame->drawLine(x1, y1, x2, y2, color);
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
@@ -331,17 +332,17 @@ void ZynRenderer::fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, u
 #endif
 }
 
-void ZynRenderer::drawTexture(ZynTexture texture, int x, int y)
+void ZynRenderer::drawTexture(ZynTexture *texture, int x, int y)
 {
-    for (int i = 0; i < texture.bufferLength; i++)
+    for (int i = 0; i < texture->bufferLength; i++)
     {
-        int xp = i % texture.resolution;
-        int yp = i / texture.resolution;
+        int xp = i % texture->resolution;
+        int yp = i / texture->resolution;
 #ifdef ZYNGINE_NATIVE_RAYLIB
-        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(xp, yp)));
+        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture->getPixel(xp, yp)));
 #endif
 #ifdef ZYNGINE_ESP32S3
-        currentFrame->drawPixel(xp + x, yp + y, texture.getPixel(xp, yp));
+        drawPixel(xp + x, yp + y, texture->getPixel(xp, yp));
 #endif
     }
 }
@@ -390,7 +391,19 @@ void ZynRenderer::diffDraw()
             while (s[xe] == p[xe])
                 --xe;
 
-            lcd_display->pushImage(xs, y, xe - xs + 1, 1, &s[xs]);
+            // Calculate inverted x positions
+            std::int32_t inverted_xs = width - 1 - xe;
+            std::int32_t inverted_xe = width - 1 - xs;
+            std::int32_t segment_width = xe - xs + 1;
+
+            // Create temporary buffer for inverted segment
+            uint8_t inverted_segment[segment_width];
+            for (int i = 0; i < segment_width; i++)
+            {
+                inverted_segment[i] = s[xs + (segment_width - 1 - i)];
+            }
+
+            lcd_display->pushImage(inverted_xs, y, segment_width, 1, inverted_segment);
         } while (x32 < w32);
         s32 += w32;
         p32 += w32;
