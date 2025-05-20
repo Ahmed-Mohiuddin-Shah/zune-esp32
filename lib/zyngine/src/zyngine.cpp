@@ -6,6 +6,11 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     // Example: Set up the renderer, input, etc.
     screenWidth = width;
     screenHeight = height;
+
+#ifdef ZYNGINE_ESP32S3
+    initializeSDCard();
+#endif
+
     onUserCreate();
 
 #ifdef ZYNGINE_ESP32S3
