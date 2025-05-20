@@ -288,10 +288,7 @@
     "C:/Users/mohiu/.platformio/packages/framework-arduinoespressif32/libraries/WiFiProv/src",
     ""
   ],
-  "C_Cpp_Runner.includeSearch": [
-    "*",
-    "**/*"
-  ],
+  "C_Cpp_Runner.includeSearch": ["*", "**/*"],
   "C_Cpp_Runner.excludeSearch": [
     "**/build",
     "**/build/**",
@@ -307,10 +304,11 @@
   "C_Cpp_Runner.useLinkTimeOptimization": false,
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.associations": {
-    "*.sqlbook": "sql",
-    "*.ndjson": "jsonl",
+    ".als.json": "jsonc",
     "*.dbclient-js": "javascript",
     "*.embeddedhtml": "html",
+    "*.sqlbook": "sql",
+    "*.ndjson": "jsonl",
     "strstream": "cpp",
     "*.tcc": "cpp",
     "fstream": "cpp",
@@ -366,7 +364,9 @@
     "text_encoding": "cpp",
     "typeinfo": "cpp",
     "iostream": "cpp",
-    "sstream": "cpp"
+    "sstream": "cpp",
+    "*.old": "cpp",
+    "*.3dprogram": "cpp"
   },
   "cSpell.words": [
     "adafruit",

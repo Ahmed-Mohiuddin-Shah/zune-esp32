@@ -1,14 +1,5 @@
 #include "system/helpers.h"
 
-void readTouch()
-{
-    p = ts.getPoint();
-    pinMode(YP, OUTPUT);
-    pinMode(XM, OUTPUT);
-    pinMode(YM, OUTPUT);
-    pinMode(XP, OUTPUT);
-}
-
 void Task1code(void *parameter)
 {
     for (;;)
