@@ -63,6 +63,8 @@ public:
     ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *lcd_display);
     void diffDraw();
 #endif
+    int getScreenWidth();
+    int getScreenHeight();
     ZVec3 barycentricCoordinate(ZVec3 *pts, ZVec3 P);
     ZVec3 world2screen(ZVec3 v);
     void renderTriangle(ZVec3 *pts, uint16_t color);
@@ -78,7 +80,7 @@ public:
     void fillRect(int x, int y, int width, int height, uint16_t color);
     void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
     void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint16_t color);
-    void drawTexture(ZynTexture texture, int x, int y); // TODO chack to see is alpha value possible
+    void drawTexture(ZynTexture *texture, int x, int y); // TODO chack to see is alpha value possible
 };
 
 #endif

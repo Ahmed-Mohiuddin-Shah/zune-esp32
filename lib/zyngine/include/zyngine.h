@@ -3,6 +3,7 @@
 
 #include <zynrenderer.h>
 #include "zyndrivers.h"
+#include "zyngui.h"
 
 class Zyngine
 {
@@ -11,6 +12,7 @@ protected:
     int screenHeight;
     int start_time = 0;
     ZynRenderer *renderer;
+    ZynGUI gui;
 public:
     bool initialize(int screenWidth, int screenHeight, int targetFPS = 30);
     void run();

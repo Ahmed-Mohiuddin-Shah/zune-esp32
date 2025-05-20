@@ -1,6 +1,5 @@
 #include <zyngine.h>
 
-
 bool Zyngine::initialize(int width, int height, int targetFPS)
 {
     // Implementation for initializing the engine
@@ -19,6 +18,8 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     renderer = new ZynRenderer(screenWidth, screenHeight);
 #endif
 
+    gui.passRenderer(renderer);
+
     return true;
 }
 
@@ -27,29 +28,35 @@ void Zyngine::run()
 
 #ifdef ZYNGINE_ESP32S3
     while (true)
-    {
-        unsigned long current_time = millis();
-        float deltaTime = (float)(current_time - start_time) / 1000.0f;
-        start_time = current_time;
-        onUserUpdate(0.016f);
-        renderer->diffDraw();
-    }
+#endif
+#ifdef ZYNGINE_NATIVE_RAYLIB
+        while (!WindowShouldClose())
+#endif
+        {
+
+#ifdef ZYNGINE_ESP32S3
+
+            unsigned long current_time = millis();
+            float deltaTime = (float)(current_time - start_time) / 1000.0f;
+            start_time = current_time;
+            onUserUpdate(deltaTime);
+            gui.update();
+            renderer->diffDraw();
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
-    while (!WindowShouldClose())
-    {
-        BeginTextureMode(renderer->frame);
-        onUserUpdate(GetFrameTime());
-        EndTextureMode();
+            BeginTextureMode(renderer->frame);
+            onUserUpdate(GetFrameTime());
+            gui.update();
+            EndTextureMode();
 
-        BeginDrawing();
-        DrawTexturePro(
-            renderer->frame.texture,
-            {0, 0, (float)renderer->frame.texture.width, (float)(renderer->frame.texture.height)},
-            {0, 0, (float)renderer->frame.texture.width, -(float)renderer->frame.texture.height},
-            {0, 0}, 0.0f, WHITE);
-        EndDrawing();
-    }
+            BeginDrawing();
+            DrawTexturePro(
+                renderer->frame.texture,
+                {0, 0, (float)renderer->frame.texture.width, (float)(renderer->frame.texture.height)},
+                {0, 0, -(float)renderer->frame.texture.width, -(float)renderer->frame.texture.height},
+                {0, 0}, 0.0f, WHITE);
+            EndDrawing();
 #endif
+        }
 }

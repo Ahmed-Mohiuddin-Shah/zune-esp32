@@ -207,6 +207,8 @@ public:
         // v = z.mulVector(lightFixed.l);
         renderer->drawPixel(lightFixed.l.x, lightFixed.l.y, ZYN_WHITE);
         // DrawCircle(v.x, v.y, v.z / 400, WHITE);
+
+        renderer->drawTexture(&floor.diffuseMap, 0, 0);
     }
 };
 
