@@ -17,3 +17,5 @@ https://github.com/zzef/pillow
 https://bytesnbits.co.uk/esp32-7-inch-lcd-elecrow/
 
 https://github.com/ssloy/tinyrenderer/issues/154
+
+https://learnwebgl.brown37.net/07_cameras/camera_rotating_motion.html

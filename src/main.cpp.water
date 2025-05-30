@@ -1,0 +1,185 @@
+#include <Adafruit_MPU6050.h>
+#include <LovyanGFX.hpp>
+#include "zyndrivers.h"
+#include <math.h>
+#include <zynrenderer.h>
+
+Adafruit_MPU6050 mpu;
+ZynRenderer *lcd;
+
+// Screen dimensions
+const int SCREEN_WIDTH = 320;
+const int SCREEN_HEIGHT = 480;
+
+// Simulation parameters
+const int PARTICLE_COUNT = 100;
+const float PARTICLE_RADIUS = 10.0f;
+const float PARTICLE_MASS = 1.0f;
+const float DAMPING = 0.98f;
+const float REPULSION_FORCE = 0.5f;
+const float GRAVITY = 9.8f;
+
+struct Particle
+{
+    float x, y;
+    float vx, vy;
+    float radius;
+    uint16_t color;
+};
+
+Particle particles[PARTICLE_COUNT];
+
+void updatePhysics(float tiltX, float tiltY);
+void drawFrame();
+
+void setup()
+{
+    Serial.begin(115200);
+
+    lcd = new ZynRenderer(320, 480, new ParallelILI9486());
+    // Initialize LCD
+    lcd->clear(ZYN_BLACK);
+
+    // Initialize MPU6050
+    if (!mpu.begin(0x69))
+    {
+        Serial.println("MPU6050 not found!");
+        while (1)
+            ;
+    }
+
+    // Initialize particles
+    randomSeed(analogRead(0));
+    for (int i = 0; i < PARTICLE_COUNT; i++)
+    {
+        particles[i].x = random(SCREEN_WIDTH / 4, SCREEN_WIDTH * 3 / 4);
+        particles[i].y = random(SCREEN_HEIGHT / 4, SCREEN_HEIGHT * 3 / 4);
+        particles[i].vx = 0;
+        particles[i].vy = 0;
+        particles[i].radius = PARTICLE_RADIUS;
+
+        // Create a blue gradient
+        uint8_t blue = random(100, 255);
+        particles[i].color = ZYN_BLUE;
+    }
+}
+
+void loop()
+{
+    // Get accelerometer data
+    sensors_event_t a, g, temp;
+    mpu.getEvent(&a, &g, &temp);
+
+    // Calculate tilt (adjusted for portrait mode)
+    float tiltX = -a.acceleration.y / 9.8f;
+    float tiltY = -a.acceleration.x / 9.8f;
+
+    // Update physics
+    updatePhysics(tiltX, tiltY);
+
+    // Draw everything
+    drawFrame();
+
+    // lcd->display();
+
+    // delay(16); // ~60fps
+}
+
+void updatePhysics(float tiltX, float tiltY)
+{
+    // First update positions and apply boundaries
+    for (int i = 0; i < PARTICLE_COUNT; i++)
+    {
+        // Apply gravity based on tilt
+        particles[i].vx += tiltX * GRAVITY;
+        particles[i].vy += tiltY * GRAVITY;
+
+        // Update position
+        particles[i].x += particles[i].vx;
+        particles[i].y += particles[i].vy;
+
+        // Apply damping
+        particles[i].vx *= DAMPING;
+        particles[i].vy *= DAMPING;
+
+        // Boundary collisions
+        if (particles[i].x < particles[i].radius)
+        {
+            particles[i].x = particles[i].radius;
+            particles[i].vx *= -0.5f;
+        }
+        if (particles[i].x > SCREEN_WIDTH - particles[i].radius)
+        {
+            particles[i].x = SCREEN_WIDTH - particles[i].radius;
+            particles[i].vx *= -0.5f;
+        }
+        if (particles[i].y < particles[i].radius)
+        {
+            particles[i].y = particles[i].radius;
+            particles[i].vy *= -0.5f;
+        }
+        if (particles[i].y > SCREEN_HEIGHT - particles[i].radius)
+        {
+            particles[i].y = SCREEN_HEIGHT - particles[i].radius;
+            particles[i].vy *= -0.5f;
+        }
+    }
+
+    // Particle-particle collisions
+    for (int i = 0; i < PARTICLE_COUNT; i++)
+    {
+        for (int j = i + 1; j < PARTICLE_COUNT; j++)
+        {
+            float dx = particles[j].x - particles[i].x;
+            float dy = particles[j].y - particles[i].y;
+            float distance = sqrt(dx * dx + dy * dy);
+            float minDistance = particles[i].radius + particles[j].radius;
+
+            if (distance < minDistance && distance > 0)
+            {
+                // Calculate collision normal
+                float nx = dx / distance;
+                float ny = dy / distance;
+
+                // Calculate relative velocity
+                float relativeVx = particles[j].vx - particles[i].vx;
+                float relativeVy = particles[j].vy - particles[i].vy;
+
+                // Calculate impulse
+                float impulse = (relativeVx * nx + relativeVy * ny) * REPULSION_FORCE;
+
+                // Apply impulse
+                particles[i].vx += impulse * nx;
+                particles[i].vy += impulse * ny;
+                particles[j].vx -= impulse * nx;
+                particles[j].vy -= impulse * ny;
+
+                // Position correction to prevent sticking
+                float correction = (minDistance - distance) * 0.5f;
+                particles[i].x -= nx * correction;
+                particles[i].y -= ny * correction;
+                particles[j].x += nx * correction;
+                particles[j].y += ny * correction;
+            }
+        }
+    }
+}
+
+void drawFrame()
+{
+    lcd->clear(ZYN_BLACK);
+
+    // Draw particles
+    for (int i = 0; i < PARTICLE_COUNT; i++)
+    {
+        lcd->fillCircle(particles[i].x, particles[i].y, particles[i].radius, particles[i].color);
+
+        // Add highlight for more liquid appearance
+        lcd->fillCircle(particles[i].x - particles[i].radius / 3,
+                       particles[i].y - particles[i].radius / 3,
+                       particles[i].radius / 2,
+                       ZYN_DARKPURPLE);
+    }
+
+    lcd->diffDraw();
+}

@@ -6,17 +6,24 @@ bool Zyngine::initialize(int width, int height, int targetFPS)
     // Example: Set up the renderer, input, etc.
     screenWidth = width;
     screenHeight = height;
+
+#ifdef ZYNGINE_ESP32S3
+    initializeSDCard();
+#endif
+
     onUserCreate();
 
 #ifdef ZYNGINE_ESP32S3
     renderer = new ZynRenderer(screenWidth, screenHeight, new ParallelILI9486());
-    start_time = millis();
-    targetFrameTime = 1.0f / (float)targetFPS;
+    // start_time = millis();
+    // targetFrameTime = 1.0f / (float)targetFPS;
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
     renderer = new ZynRenderer(screenWidth, screenHeight);
 #endif
+
+    gui.passRenderer(renderer);
 
     return true;
 }
@@ -26,29 +33,37 @@ void Zyngine::run()
 
 #ifdef ZYNGINE_ESP32S3
     while (true)
-    {
-        unsigned long current_time = millis();
-        float deltaTime = (float)(current_time - start_time) / 1000.0f;
-        start_time = current_time;
+#endif
+#ifdef ZYNGINE_NATIVE_RAYLIB
+        while (!WindowShouldClose())
+#endif
+        {
 
-        renderer->diffDraw();
-    }
+        gui.getInputs();
+
+#ifdef ZYNGINE_ESP32S3
+
+            unsigned long current_time = millis();
+            float deltaTime = (float)(current_time - start_time) / 1000.0f;
+            start_time = current_time;
+            onUserUpdate(deltaTime);
+            gui.update();
+            renderer->diffDraw();
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
-    while (!WindowShouldClose())
-    {
-        BeginTextureMode(renderer->frame);
-        onUserUpdate(GetFrameTime());
-        EndTextureMode();
+            BeginTextureMode(renderer->frame);
+            onUserUpdate(GetFrameTime());
+            gui.update();
+            EndTextureMode();
 
-        BeginDrawing();
-        DrawTexturePro(
-            renderer->frame.texture,
-            {0, 0, (float)renderer->frame.texture.width, (float)(renderer->frame.texture.height)},
-            {0, 0, (float)renderer->frame.texture.width, -(float)renderer->frame.texture.height},
-            {0, 0}, 0.0f, WHITE);
-        EndDrawing();
-    }
+            BeginDrawing();
+            DrawTexturePro(
+                renderer->frame.texture,
+                {0, 0, (float)renderer->frame.texture.width, (float)(renderer->frame.texture.height)},
+                {0, 0, -(float)renderer->frame.texture.width, -(float)renderer->frame.texture.height},
+                {0, 0}, 0.0f, WHITE);
+            EndDrawing();
 #endif
+        }
 }

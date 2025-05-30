@@ -1,4 +1,4 @@
-#include "ZynRenderer.h"
+#include "zynrenderer.h"
 #include <algorithm>
 #include <iostream>
 #include <vector>
@@ -10,10 +10,13 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight, lgfx::LGFX_Device *l
     this->screenHeight = screenHeight;
     this->lcd_display = lcd_display;
 
+    zDepthBufferLength = screenWidth * screenHeight;
+    zDepthBuffer = new float[zDepthBufferLength];
+
     lcd_display->begin();
     lcd_display->startWrite();
     lcd_display->setColorDepth(16);
-    lcd_display->setRotation(0); // Set rotation to 0 for portrait mode
+    lcd_display->setRotation(2);
 
     currentFrame = new LGFX_Sprite();
     previousFrame = new LGFX_Sprite();
@@ -44,6 +47,16 @@ ZynRenderer::ZynRenderer(int screenWidth, int screenHeight)
     this->frame = LoadRenderTexture(screenWidth, screenHeight);
 }
 #endif
+
+int ZynRenderer::getScreenHeight()
+{
+    return screenHeight;
+}
+
+int ZynRenderer::getScreenWidth()
+{
+    return screenWidth;
+}
 
 ZVec3 ZynRenderer::barycentricCoordinate(ZVec3 *pts, ZVec3 P)
 {
@@ -196,9 +209,11 @@ void ZynRenderer::renderTexturedTriangle(ZVec3i *pts, ZVec2i *tpts, float *inten
             ZVec3i P = (ZVec3(A).add(ZVec3(B.sub(A)).mul(phi))).toZVec3i();
             ZVec2i uvP = uvA.add((uvB.sub(uvA)).mul(phi));
             float ityP = ityA + (ityB - ityA) * phi;
-            ityP = std::clamp(ityP, 0.1f, 1.0f);
+            // Clamp value between 0.1f and 1.0f (for pre-C++17)
+            ityP = (ityP < 0.1f) ? 0.1f : (ityP > 1.0f ? 1.0f : ityP);
             if (P.x >= screenWidth || P.y >= screenHeight || P.x < 0 || P.y < 0)
                 continue;
+
             if (getZBuffer(P.x, P.y) < P.z)
             {
                 setZBuffer(P.x, P.y, P.z);
@@ -246,6 +261,19 @@ void ZynRenderer::printText(int x, int y, const char *text, uint16_t backgroundC
 #endif
 }
 
+void ZynRenderer::printText(int x, int y, const char *text, int size, uint16_t backgroundColor, uint16_t textColor)
+{
+#ifdef ZYNGINE_ESP32S3
+    currentFrame->setCursor(x, y, 2);
+    currentFrame->setTextColor(backgroundColor, textColor);
+    currentFrame->setTextSize(size);
+    currentFrame->print(text);
+#endif
+#ifdef ZYNGINE_NATIVE_RAYLIB
+    DrawText(text, x, y, size, getRaylibColorFromRGB565(textColor));
+#endif
+}
+
 void ZynRenderer::drawPixel(int x, int y, uint16_t color)
 {
 #ifdef ZYNGINE_ESP32S3
@@ -260,7 +288,7 @@ void ZynRenderer::drawPixel(int x, int y, uint16_t color)
 void ZynRenderer::drawLine(int x1, int y1, int x2, int y2, uint16_t color)
 {
 #ifdef ZYNGINE_ESP32S3
-    currentFrame->drawLine(x1, y2, x2, y2, color);
+    currentFrame->drawLine(x1, y1, x2, y2, color);
 #endif
 
 #ifdef ZYNGINE_NATIVE_RAYLIB
@@ -317,14 +345,80 @@ void ZynRenderer::fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, u
 #endif
 }
 
-void ZynRenderer::drawTexture(ZynTexture texture, int x, int y)
+void ZynRenderer::drawTexture(ZynTexture *texture, int x, int y)
 {
-    for (int i = 0; i < texture.bufferLength; i++)
+    for (int i = 0; i < texture->bufferLength; i++)
     {
-        int xp = i % texture.resolution;
-        int yp = i / texture.resolution;
-        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture.getPixel(xp, yp)));
+        int xp = i % texture->resolution;
+        int yp = i / texture->resolution;
+#ifdef ZYNGINE_NATIVE_RAYLIB
+        DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture->getPixel(xp, yp)));
+#endif
+#ifdef ZYNGINE_ESP32S3
+        drawPixel(xp + x, yp + y, texture->getPixel(xp, yp));
+#endif
     }
+}
+
+void ZynRenderer::drawTexture(ZynTexture *texture, int x, int y, float scaleX, float scaleY)
+{
+    // using only getPixel of Zyntexture and drawPixel of renderer
+    int scaledWidth = (int)(texture->resolution * scaleX);
+    int scaledHeight = (int)(texture->resolution * scaleY);
+    for (int yp = 0; yp < scaledHeight; yp++)
+    {
+        for (int xp = 0; xp < scaledWidth; xp++)
+        {
+            // Nearest neighbor sampling
+            int src_x = (int)(xp / scaleX);
+            int src_y = (int)(yp / scaleY);
+            if (src_x >= texture->resolution)
+                src_x = texture->resolution - 1;
+            if (src_y >= texture->resolution)
+                src_y = texture->resolution - 1;
+#ifdef ZYNGINE_NATIVE_RAYLIB
+            DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture->getPixel(src_x, src_y)));
+#endif
+#ifdef ZYNGINE_ESP32S3
+            drawPixel(xp + x, yp + y, texture->getPixel(src_x, src_y));
+#endif
+        }
+    }
+}
+
+void ZynRenderer::drawTextureToBox(ZynTexture *texture, int x, int y, int fitWidth, int fitHeight)
+{
+    // using only getPixel of Zyntexture and drawPixel of renderer
+    float scaleX = (float)fitWidth / texture->resolution;
+    float scaleY = (float)fitHeight / texture->resolution;
+    int scaledWidth = (int)(texture->resolution * scaleX);
+    int scaledHeight = (int)(texture->resolution * scaleY);
+    for (int yp = 0; yp < scaledHeight; yp++)
+    {
+        for (int xp = 0; xp < scaledWidth; xp++)
+        {
+            // Nearest neighbor sampling
+            int src_x = (int)(xp / scaleX);
+            int src_y = (int)(yp / scaleY);
+            if (src_x >= texture->resolution)
+                src_x = texture->resolution - 1;
+            if (src_y >= texture->resolution)
+                src_y = texture->resolution - 1;
+#ifdef ZYNGINE_NATIVE_RAYLIB
+            DrawPixel(xp + x, yp + y, getRaylibColorFromRGB565(texture->getPixel(src_x, src_y)));
+#endif
+#ifdef ZYNGINE_ESP32S3
+            drawPixel(xp + x, yp + y, texture->getPixel(src_x, src_y));
+#endif
+        }
+    }
+}
+
+void ZynRenderer::fillCircle(int x, int y, int r, uint16_t color)
+{
+#ifdef ZYNGINE_ESP32S3
+    currentFrame->fillCircle(x, y, r, color);
+#endif
 }
 
 #ifdef ZYNGINE_ESP32S3
@@ -371,16 +465,38 @@ void ZynRenderer::diffDraw()
             while (s[xe] == p[xe])
                 --xe;
 
-            lcd_display->pushImage(xs, y, xe - xs + 1, 1, &s[xs]);
+            // Calculate inverted x positions
+            std::int32_t inverted_xs = width - 1 - xe;
+            std::int32_t inverted_xe = width - 1 - xs;
+            std::int32_t segment_width = xe - xs + 1;
+
+            // Create temporary buffer for inverted segment
+            uint8_t inverted_segment[segment_width];
+            for (int i = 0; i < segment_width; i++)
+            {
+                inverted_segment[i] = s[xs + (segment_width - 1 - i)];
+            }
+
+            lcd_display->pushImage(inverted_xs, y, segment_width, 1, inverted_segment);
         } while (x32 < w32);
         s32 += w32;
         p32 += w32;
     } while (++y < height);
+
     lcd_display->display();
 
     LGFX_Sprite *swap;
     swap = currentFrame;
     currentFrame = previousFrame;
     previousFrame = swap;
+}
+
+void ZynRenderer::readTouch()
+{
+    p = ts.getPoint();
+    pinMode(YP, OUTPUT);
+    pinMode(XM, OUTPUT);
+    pinMode(YM, OUTPUT);
+    pinMode(XP, OUTPUT);
 }
 #endif

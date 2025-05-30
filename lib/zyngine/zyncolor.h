@@ -1,6 +1,12 @@
 #ifndef ZYNCOLOR_H
 #define ZYNCOLOR_H
 
+#ifdef ZYNGINE_NATIVE_RAYLIB
+#include <raylib.h>
+#endif
+#include <cstdint>
+#include <cstdio>
+
 // 16 bit RGB565 colors
 #define ZYN_WHITE 0xFFFF
 #define ZYN_LIGHTGRAY 0xCE59  // Light Gray
@@ -29,5 +35,23 @@
 #define ZYN_BLACK 0x0000    // Black
 #define ZYN_MAGENTA 0xF81F  // Magenta
 #define ZYN_RAYWHITE 0xF7BE // Raylib Logo White
+
+struct zyncolor
+{
+    uint8_t r, g, b;
+    uint16_t color;
+    zyncolor(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {
+        // RGB565 conversion
+        color = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+    }
+    zyncolor(uint16_t color) : color(color)
+    {
+        r = (color >> 8) & 0xF8;
+        g = (color >> 3) & 0xFC;
+        b = (color << 3) & 0xF8;
+    }
+    zyncolor() : r(0), g(0), b(0), color(0) {}
+    zyncolor(const zyncolor &other) : r(other.r), g(other.g), b(other.b), color(other.color) {}
+};
 
 #endif
