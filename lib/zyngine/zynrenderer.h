@@ -89,6 +89,7 @@ public:
     void drawTexture(ZynTexture *texture, int x, int y); // TODO chack to see is alpha value possible
     void drawTexture(ZynTexture *texture, int x, int y, float scaleX, float scaleY);
     void drawTextureToBox(ZynTexture *texture, int x, int y, int fitWidth, int fitHeight);
+    void fillCircle(int x, int y, int r, uint16_t color);
     void readTouch();
 };
 

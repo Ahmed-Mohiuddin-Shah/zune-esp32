@@ -1,0 +1,193 @@
+#include <zyngine.h>
+#include <vector>
+#include <cmath>
+#include <random>
+#include <time.h>
+
+class FireworkSim : public Zyngine
+{
+private:
+    struct Particle
+    {
+        float x, y;
+        float vx, vy;
+        uint32_t color;
+        float lifetime;
+        float maxLifetime;
+    };
+
+    struct Firework
+    {
+        float x, y;
+        float vy;
+        uint32_t color;
+        bool exploded;
+        std::vector<Particle> particles;
+    };
+
+    std::vector<Firework> fireworks;
+    std::default_random_engine rng;
+    float timeSinceLastFirework = 0.0f;
+    const float fireworkDelay = 0.5f;
+
+    uint16_t getRandomColor()
+    {
+        static const uint16_t colors[] = {
+            ZYN_RED,     // Red
+            ZYN_GREEN,   // Green
+            ZYN_BLUE,    // Blue
+            ZYN_YELLOW,  // Yellow
+            ZYN_MAGENTA, // Magenta
+            ZYN_ORANGE,  // Orange
+            ZYN_PINK     // Pink
+        };
+        return colors[std::uniform_int_distribution<int>(0, 7)(rng)];
+    }
+
+    void createFirework(float x)
+    {
+        Firework fw;
+        fw.x = x;
+        fw.y = screenHeight - 10;
+        fw.vy = -std::uniform_real_distribution<float>(150.0f, 250.0f)(rng);
+        fw.color = getRandomColor();
+        fw.exploded = false;
+        fireworks.push_back(fw);
+    }
+
+    void explodeFirework(Firework &fw)
+    {
+        int particleCount = std::uniform_int_distribution<int>(50, 150)(rng);
+
+        for (int i = 0; i < particleCount; i++)
+        {
+            float angle = std::uniform_real_distribution<float>(0, 2 * M_PI)(rng);
+            float speed = std::uniform_real_distribution<float>(50.0f, 200.0f)(rng);
+
+            Particle p;
+            p.x = fw.x;
+            p.y = fw.y;
+            p.vx = cos(angle) * speed;
+            p.vy = sin(angle) * speed;
+            p.color = fw.color;
+            p.maxLifetime = std::uniform_real_distribution<float>(0.5f, 2.0f)(rng);
+            p.lifetime = p.maxLifetime;
+
+            fw.particles.push_back(p);
+        }
+
+        fw.exploded = true;
+    }
+
+    void onUserCreate() override
+    {
+        rng.seed(time(nullptr));
+    }
+
+    void onUserUpdate(float deltaTime) override
+    {
+        // Clear screen
+        renderer->clear(ZYN_BLACK);
+
+        // Handle input
+        timeSinceLastFirework += deltaTime;
+#ifdef ZYNGINE_ESP32S3
+        if ((!digitalRead(HOME_BUTTON) || timeSinceLastFirework > fireworkDelay) && fireworks.size() < 10)
+#endif
+#ifdef ZYNGINE_NATIVE_RAYLIB
+            if ((IsKeyPressed(KEY_A) || timeSinceLastFirework > fireworkDelay) && fireworks.size() < 10)
+#endif
+            {
+                float x = std::uniform_real_distribution<float>(screenWidth * 0.2f, screenWidth * 0.8f)(rng);
+                createFirework(x);
+                timeSinceLastFirework = 0.0f;
+            }
+
+        // Update and draw fireworks
+        for (auto it = fireworks.begin(); it != fireworks.end();)
+        {
+            Firework &fw = *it;
+
+            if (!fw.exploded)
+            {
+                // Update position
+                fw.y += fw.vy * deltaTime;
+                fw.vy += 100.0f * deltaTime; // Gravity
+
+                // Draw rocket
+                renderer->fillRect(fw.x - 2, fw.y - 2, 4, 4, fw.color);
+
+                // Check if should explode
+                if (fw.vy >= 0)
+                {
+                    explodeFirework(fw);
+                }
+
+                ++it;
+            }
+            else
+            {
+                // Update and draw particles
+                bool allDead = true;
+
+                for (auto pit = fw.particles.begin(); pit != fw.particles.end();)
+                {
+                    Particle &p = *pit;
+
+                    if (p.lifetime > 0)
+                    {
+                        // Update position
+                        p.x += p.vx * deltaTime;
+                        p.y += p.vy * deltaTime;
+                        p.vy += 50.0f * deltaTime; // Gravity
+
+                        // Update lifetime
+                        p.lifetime -= deltaTime;
+
+                        // Draw particle
+                        float alpha = (p.lifetime / p.maxLifetime) * 255;
+                        uint32_t fadeColor = (p.color & 0xFFFFFF00) | (static_cast<uint32_t>(alpha) & 0xFF);
+                        renderer->drawPixel(p.x, p.y, fadeColor);
+
+                        allDead = false;
+                        ++pit;
+                    }
+                    else
+                    {
+                        pit = fw.particles.erase(pit);
+                    }
+                }
+
+                if (allDead)
+                {
+                    it = fireworks.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+    }
+};
+
+FireworkSim engine;
+
+void setup()
+{
+    engine.initialize(320, 480, 60);
+}
+
+void loop()
+{
+    engine.run();
+}
+
+#ifdef ZYNGINE_NATIVE_RAYLIB
+int main()
+{
+    setup();
+    loop();
+    return 0;
+}
+#endif

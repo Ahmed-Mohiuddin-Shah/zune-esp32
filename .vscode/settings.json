@@ -369,7 +369,8 @@
     "iostream": "cpp",
     "sstream": "cpp",
     "*.old": "cpp",
-    "*.3dprogram": "cpp"
+    "*.3dprogram": "cpp",
+    "unordered_set": "cpp"
   },
   "cSpell.words": [
     "adafruit",

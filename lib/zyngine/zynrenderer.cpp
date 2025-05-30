@@ -414,6 +414,13 @@ void ZynRenderer::drawTextureToBox(ZynTexture *texture, int x, int y, int fitWid
     }
 }
 
+void ZynRenderer::fillCircle(int x, int y, int r, uint16_t color)
+{
+#ifdef ZYNGINE_ESP32S3
+    currentFrame->fillCircle(x, y, r, color);
+#endif
+}
+
 #ifdef ZYNGINE_ESP32S3
 void ZynRenderer::diffDraw()
 {
@@ -491,6 +498,5 @@ void ZynRenderer::readTouch()
     pinMode(XM, OUTPUT);
     pinMode(YM, OUTPUT);
     pinMode(XP, OUTPUT);
-    
 }
 #endif

@@ -109,6 +109,11 @@ struct ZMesh
 #endif
             return true;
         }
+
+        bool loadHeightMap(const char *name, const char *path)
+        {
+            
+        }
     };
 
     struct ZModel

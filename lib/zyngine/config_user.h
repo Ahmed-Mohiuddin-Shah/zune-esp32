@@ -23,7 +23,7 @@
 
 // .zyntex resolution
 #define ZYNTEX_MAX_RESOLUTION 64 // for now, 64x64 is the max resolution as it is working the best
-
+#define LOCKSCREEN_ENABLED false
 
 // =======================================
 // CONFIGURATION FOR ESP32-S3
@@ -40,7 +40,7 @@
 #include "ESP32Encoder.h"
 // #include <driver/i2s.h>
 // #include <Adafruit_Sensor.h>
-// #include <Adafruit_MPU6050.h>
+#include <Adafruit_MPU6050.h>
 
 #define HOME_BUTTON 3
 
@@ -85,7 +85,6 @@
 
 // // I2C Devices
 // RTC_DS1307 rtc;
-// Adafruit_MPU6050 mpu;
 
 // TaskHandle_t Task1;
 

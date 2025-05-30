@@ -11,17 +11,17 @@ private:
     ZynRenderer *renderer;
     ZynTexture wallpaper;
 
-    ZVec2i cursorPos;
-
     int screenWidth;
     int screenHeight;
-    int lockScreenSlidePosition = 0;
+    int lockScreenSlidePosition = 480;
     bool shouldLockScreenMove = false;
-    bool lockScreenMoveDirection = false; // * false for up
+    bool lockScreenMoveDirection = true; // * false for up
     int batteryValue;
     float battPercentage;
 
+#ifdef ZYNGINE_ESP32S3
     PS2 mouse = PS2(MOUSE_CLK, MOUSE_DATA);
+    ESP32Encoder encoder;
 
     void mouseInit()
     {
@@ -60,10 +60,14 @@ private:
 
         return cursorPos;
     }
+#endif
 
 public:
+    int encoderSteps = 0;
+    ZVec2i cursorPos;
     ZynGUI()
     {
+#ifdef ZYNGINE_ESP32S3
         pinMode(HOME_BUTTON, INPUT_PULLUP);
         pinMode(POWER_BUTTON, INPUT_PULLUP);
         pinMode(ENCODER_BUTTON, INPUT_PULLUP);
@@ -71,7 +75,11 @@ public:
         pinMode(BATTERY_SENSE, INPUT);
         adcAttachPin(BATTERY_SENSE);
 
+        encoder.attachFullQuad(CLK, DT);
+        encoder.setCount(0);
+
         mouseInit();
+#endif
     }
 
     void passRenderer(ZynRenderer *renderer)
@@ -183,7 +191,7 @@ public:
     void lockScreen()
     {
 
-        if (shouldLockScreenMove)
+        if (shouldLockScreenMove && LOCKSCREEN_ENABLED)
         {
             lockScreenSlidePosition += lockScreenMoveDirection ? 50 : -50;
             if (lockScreenSlidePosition > screenHeight)
@@ -216,6 +224,7 @@ public:
 
     void getInputs()
     {
+#ifdef ZYNGINE_ESP32S3
         readMouse();
 
         if (!digitalRead(HOME_BUTTON))
@@ -223,12 +232,16 @@ public:
             shouldLockScreenMove = true;
         }
 
+        encoderSteps = encoder.getCount();
+        encoder.setCount(0);
+
         batteryValue = analogRead(BATTERY_SENSE);
         battPercentage = ((float)(batteryValue - 2818) / (3470 - 2818)) * 100.0f;
         if (battPercentage < 0.0f)
             battPercentage = 0.0f;
         if (battPercentage > 100.0f)
             battPercentage = 100.0f;
+#endif
     }
 
     void update()
