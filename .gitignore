@@ -5,3 +5,12 @@
 .vscode/ipch
 
 resources/optimized_assets/**
+# CMake / IDF
+build/
+cmake-build-*/
+examples/espidf_smoke/build/
+managed_components/
+dependencies.lock
+sdkconfig
+sdkconfig.old
+.pio/

@@ -1,0 +1,3 @@
+# Empty placeholder so the directory is tracked.
+# Future SPI/I2C device drivers (IMU, RTC, etc.) go here — apps should not
+# include vendor headers directly.

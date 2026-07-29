@@ -1,67 +1,73 @@
-# Zune-ESP32 Project
+# Zyngine
 
-# !!! THIS IS NOT FINAL !!!
+Lightweight, platform-agnostic embedded graphics / UI engine.
 
-## !!! WORK IN PROGRESS !!!
+Applications talk to Zyngine APIs only. Platform SDKs (Raylib, ESP-IDF, future Arduino)
+stay behind the HAL in `src/platform/<name>/`.
 
-## Overview
+```
+Application → Widgets / Clay layout → Graphics Core → HAL → Platform → Vendor SDK
+```
 
-This project aims to create a Zune HD-like device using an ESP32-S3 microcontroller with a 3.5-inch touch screen. The device will include various features such as an IMU, rotary encoder, camera (via USB 1.1), I2S speaker and microphone, headphone jack, and an SD card for storing programs and files.
+## Platforms (Stage 1)
 
-## Features
+| Platform | Status | Build |
+|----------|--------|-------|
+| Desktop (Raylib) | Working | CMake |
+| ESP-IDF | Working layout | `idf.py` |
+| Arduino | Stub only | see `src/platform/arduino/README.md` |
 
-- **ESP32-S3 WROOM-1 (N8R2) Microcontroller**
-- **3.5-inch Touch Screen**
-- **IMU (Inertial Measurement Unit)**
-- **Rotary Encoder**
-- **Camera (via USB 1.1)**
-- **I2S Speaker and Microphone**
-- **Headphone Jack**
-- **SD Card Slot**
+## Language
 
-## Development Goals
+C++20 is required because [Clay](https://github.com/nicbarker/clay) needs it. Engine/HAL
+code otherwise sticks to C++17-friendly patterns.
 
-1. **Library and SDK System**: Develop a library and SDK to define memory limits so that programs can fit within the ESP32 memory constraints.
-2. **PlatformIO Integration**: Use PlatformIO for development to streamline the process of compiling and uploading code to the ESP32.
-3. **Cross-Compilation**: Implement a system where the custom library can detect the build target and compile an executable (.exe) for Windows using GCC, and use the appropriate functions or API when compiling and uploading through PlatformIO to the ESP32.
+```bash
+cmake -B build -DZYN_PLATFORM=desktop -DZYN_BUILD_EXAMPLES=ON
+cmake --build build -j
+./build/desktop_smoke
+```
 
-## Getting Started
+## ESP-IDF build
 
-### Prerequisites
+Export your ESP-IDF environment, then:
 
-- [PlatformIO](https://platformio.org/)
-- [GCC for Windows](https://gcc.gnu.org/)
-- ESP32-S3 Development Board
-- 3.5-inch Touch Screen
-- Additional peripherals (IMU, rotary encoder, camera, I2S speaker and microphone, headphone jack, SD card)
+```bash
+cd examples/espidf_smoke
+idf.py set-target esp32s3
+idf.py build
+idf.py -p /dev/ttyUSB0 flash monitor
+```
 
-### Installation
+LovyanGFX is pulled via the example’s `idf_component.yml`. Board pins live in
+`boards/esp32_s3_zune/board.hpp`.
 
-1. Clone the repository:
-   ```sh
-   git clone https://github.com/Ahmed-Mohiuddin-Shah/zune-esp32.git
-   ```
-2. Open the project in PlatformIO.
+## UI: Clay + Retro TUI theme
 
-### Building and Uploading
+- Layout: vendored [Clay](https://github.com/nicbarker/clay) (`third_party/clay/clay.h`)
+- Rendering: **one** shared Clay → Graphics Core mapper (no Clay-Raylib path)
+- Theme: amber CRT by default; green phosphor via `Theme::setGreen()`
+- Widgets: `drawLabel`, `drawButton`, `drawPanel` (behavior + Clay declarations only)
 
-- To compile and upload code to the ESP32:
-  ```sh
-  platformio run --target upload
-  ```
-- To compile an executable for Windows:
-  ```sh
-  gcc -o your_program.exe your_program.c
-  ```
+Clay arena defaults are intentionally small for embedded (see `ClayHostConfig`). Raise
+`maxElements` / `arenaBytes` on desktop; on ESP32-S3 prefer PSRAM for larger arenas.
 
-## Contributing
+## Layout
 
-Contributions are welcome! Please fork the repository and create a pull request with your changes.
+```
+include/zyngine/   public headers (core, graphics, ui, hal, board)
+src/               implementations + platform backends
+boards/            pin / display config (no parser yet)
+examples/          desktop_smoke, espidf_smoke, legacy (parked)
+components/zyngine ESP-IDF component wrapper
+third_party/clay   Clay single header
+```
 
-## License
+## Legacy apps
 
-This project is licensed under the MIT License.
+Old PlatformIO Tetris / demos are under `examples/legacy/` and are **not** built by default.
+They still need a port to the new Engine / HAL APIs.
 
-## Contact
+## License / history
 
-For any questions or suggestions, please open an issue or contact the project maintainer.
+Previously built with PlatformIO + Arduino. PlatformIO has been removed; use CMake / idf.py.
