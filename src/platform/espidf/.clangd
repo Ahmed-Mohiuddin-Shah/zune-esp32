@@ -1,0 +1,3 @@
+# clangd: host Index uses desktop build/; these sources need the IDF DB.
+CompileFlags:
+  CompilationDatabase: ../../../examples/espidf_smoke/build

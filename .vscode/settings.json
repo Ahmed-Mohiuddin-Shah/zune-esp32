@@ -5,11 +5,11 @@
   "C_Cpp.errorSquiggles": "disabled",
   "clangd.path": "/home/mohiuddin/.local/bin/clangd",
   "clangd.arguments": [
-    "--compile-commands-dir=${workspaceFolder}/build",
     "--background-index",
     "--clang-tidy=0",
     "--header-insertion=never"
   ],
+  // compile DBs: root .clangd → build/; ESP platform → examples/espidf_smoke/build
   "cmake.configureOnOpen": true,
   "cmake.buildDirectory": "${workspaceFolder}/build",
   "files.associations": {

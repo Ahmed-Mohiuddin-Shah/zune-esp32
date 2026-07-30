@@ -1,2 +1,3 @@
+# Default: desktop CMake build. ESP-IDF tree overrides in src/platform/espidf/.clangd
 CompileFlags:
   CompilationDatabase: build

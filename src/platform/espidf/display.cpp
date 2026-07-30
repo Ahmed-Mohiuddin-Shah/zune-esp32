@@ -1,5 +1,4 @@
 #include "zyngine/hal/display.hpp"
-#include "zyngine/hal/gpio.hpp"
 #include "zyngine/hal/input.hpp"
 #include "zyngine/hal/log.hpp"
 #include "zyngine/hal/touch_calib.hpp"
