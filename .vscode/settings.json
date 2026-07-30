@@ -7,7 +7,8 @@
   "clangd.arguments": [
     "--background-index",
     "--clang-tidy=0",
-    "--header-insertion=never"
+    "--header-insertion=never",
+    "--query-driver=/home/mohiuddin/.espressif/tools/**/xtensa-*-elf-*"
   ],
   // compile DBs: root .clangd → build/; ESP platform → examples/espidf_smoke/build
   "cmake.configureOnOpen": true,

@@ -1,3 +1,16 @@
-# clangd: host Index uses desktop build/; these sources need the IDF DB.
+# Host clangd parses IDF's xtensa-gcc DB — define the arch GCC would, drop GCC-only flags.
 CompileFlags:
   CompilationDatabase: ../../../examples/espidf_smoke/build
+  Add:
+    - -D__XTENSA__=1
+  Remove:
+    - -mlongcalls
+    - -fno-shrink-wrap
+    - -fstrict-volatile-bitfields
+    - -fno-tree-switch-conversion
+    - -fzero-call-used-regs=*
+    - -mtext-section-literals
+    - -mforce-l32
+Diagnostics:
+  # include-cleaner false-positives on IDF transitive headers
+  UnusedIncludes: None
