@@ -1,7 +1,6 @@
 #include "clay.h"
 
 #include "zyngine/core/engine.hpp"
-#include "zyngine/graphics/color.hpp"
 #include "zyngine/hal/encoder.hpp"
 #include "zyngine/hal/input.hpp"
 #include "zyngine/hal/log.hpp"

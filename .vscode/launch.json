@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug desktop_smoke",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/desktop_smoke",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "CMake: build"
+        }
+    ]
+}
