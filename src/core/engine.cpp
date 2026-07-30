@@ -18,8 +18,13 @@ bool Engine::initialize(int screenWidth, int screenHeight, int targetFPS) {
         return false;
     }
 
+    // FB first (largest DRAM slab), then Clay in onUserCreate (other heap region).
     renderer_ = new Renderer(screenWidth, screenHeight, *display_);
     renderer = renderer_;
+    if (!renderer_->ok()) {
+        hal::Log::error("Engine", "Renderer framebuffer alloc failed");
+        return false;
+    }
 
     onUserCreate();
     return true;

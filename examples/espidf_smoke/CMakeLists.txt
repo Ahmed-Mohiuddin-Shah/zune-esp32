@@ -1,7 +1,7 @@
 # ESP-IDF smoke example for Zyngine
 #
 # From this directory (with ESP-IDF exported):
-#   idf.py set-target esp32s3
+#   idf.py set-target esp32
 #   idf.py build
 #   idf.py -p PORT flash monitor
 

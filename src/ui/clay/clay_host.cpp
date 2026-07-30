@@ -12,6 +12,10 @@
 #include <cstring>
 #include <new>
 
+#if defined(ZYN_PLATFORM_ESPIDF)
+#include "esp_heap_caps.h"
+#endif
+
 namespace zyngine::ui {
 namespace {
 
@@ -44,8 +48,15 @@ bool ClayHost::init(const ClayHostConfig& config) {
     Clay_SetMaxElementCount(config.maxElements);
     const uint64_t needed = Clay_MinMemorySize();
     arenaBytes_ = config.arenaBytes > needed ? config.arenaBytes : static_cast<size_t>(needed);
+#if defined(ZYN_PLATFORM_ESPIDF)
+    arenaMemory_ = heap_caps_malloc(arenaBytes_, MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL);
+#else
     arenaMemory_ = std::malloc(arenaBytes_);
+#endif
     if (!arenaMemory_) {
+        zyngine::hal::Log::error("Clay", "arena malloc failed (%u bytes, need >=%u)",
+                                 static_cast<unsigned>(arenaBytes_),
+                                 static_cast<unsigned>(needed));
         return false;
     }
 
@@ -53,6 +64,11 @@ bool ClayHost::init(const ClayHostConfig& config) {
     Clay_Initialize(arena, Clay_Dimensions{static_cast<float>(config.screenWidth),
                                            static_cast<float>(config.screenHeight)},
                     Clay_ErrorHandler{handleClayError, nullptr});
+    if (!Clay_GetCurrentContext()) {
+        zyngine::hal::Log::error("Clay", "Clay_Initialize left null context");
+        shutdown();
+        return false;
+    }
     Clay_SetMeasureTextFunction(measureText, nullptr);
     zyngine::ui::Theme::instance().setScreenWidth(config.screenWidth);
     ready_ = true;
@@ -61,7 +77,11 @@ bool ClayHost::init(const ClayHostConfig& config) {
 
 void ClayHost::shutdown() {
     if (arenaMemory_) {
+#if defined(ZYN_PLATFORM_ESPIDF)
+        heap_caps_free(arenaMemory_);
+#else
         std::free(arenaMemory_);
+#endif
         arenaMemory_ = nullptr;
     }
     ready_ = false;
@@ -69,6 +89,9 @@ void ClayHost::shutdown() {
 
 void ClayHost::beginFrame(float deltaTime, float pointerX, float pointerY, bool pointerDown,
                           const hal::EncoderState& encoder) {
+    if (!ready_) {
+        return;
+    }
     deltaTime_ = deltaTime;
     FocusNav::instance().beginFrame(encoder.steps, encoder.pressed);
     Clay_SetPointerState(Clay_Vector2{pointerX, pointerY}, pointerDown);
@@ -76,6 +99,9 @@ void ClayHost::beginFrame(float deltaTime, float pointerX, float pointerY, bool 
 }
 
 Clay_RenderCommandArray ClayHost::endFrame() {
+    if (!ready_) {
+        return Clay_RenderCommandArray{};
+    }
     Clay_RenderCommandArray cmds = Clay_EndLayout(deltaTime_);
     FocusNav::instance().endFrame();
     return cmds;

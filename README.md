@@ -34,13 +34,13 @@ Export your ESP-IDF environment, then:
 
 ```bash
 cd examples/espidf_smoke
-idf.py set-target esp32s3
+idf.py set-target esp32
 idf.py build
 idf.py -p /dev/ttyUSB0 flash monitor
 ```
 
-LovyanGFX is pulled via the example’s `idf_component.yml`. Board pins live in
-`boards/esp32_s3_zune/board.hpp`.
+Display uses ESP-IDF `esp_lcd` (SPI DMA ILI9341) + XPT2046 touch. Board pins live in
+`boards/esp32_ili9341_32/board.hpp`. No PSRAM assumed — Clay arena is ~64 KB.
 
 ## UI: Clay + Retro TUI theme
 
@@ -50,7 +50,7 @@ LovyanGFX is pulled via the example’s `idf_component.yml`. Board pins live in
 - Widgets: `drawLabel`, `drawButton`, `drawPanel` (behavior + Clay declarations only)
 
 Clay arena defaults are intentionally small for embedded (see `ClayHostConfig`). Raise
-`maxElements` / `arenaBytes` on desktop; on ESP32-S3 prefer PSRAM for larger arenas.
+`maxElements` / `arenaBytes` on desktop; on plain ESP32 keep arenas small (no PSRAM).
 
 ## Layout
 

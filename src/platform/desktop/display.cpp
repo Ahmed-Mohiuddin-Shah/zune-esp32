@@ -2,7 +2,9 @@
 #include "zyngine/hal/encoder.hpp"
 #include "zyngine/hal/input.hpp"
 #include "zyngine/hal/log.hpp"
+#include "zyngine/hal/touch_calib.hpp"
 #include "zyngine/graphics/color.hpp"
+#include "zyngine/graphics/renderer.hpp"
 
 #include <raylib.h>
 
@@ -129,5 +131,10 @@ EncoderState Encoder::poll() {
     // Don't clear pressed/released here — they're frame-fresh from pollEvents.
     return out;
 }
+
+bool TouchCalib::load(TouchCalData*) { return true; }
+bool TouchCalib::save(const TouchCalData&) { return true; }
+void TouchCalib::apply(const TouchCalData&) {}
+bool TouchCalib::run(Renderer&, Display&) { return true; }
 
 }  // namespace zyngine::hal

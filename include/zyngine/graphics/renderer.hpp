@@ -23,8 +23,10 @@ public:
     int getScreenWidth() const { return screenWidth_; }
     int getScreenHeight() const { return screenHeight_; }
 
-    uint16_t* pixels() { return pixels_.data(); }
-    const uint16_t* pixels() const { return pixels_.data(); }
+    /// Null if framebuffer allocation failed (e.g. ESP32 OOM).
+    uint16_t* pixels() { return pixels_; }
+    const uint16_t* pixels() const { return pixels_; }
+    bool ok() const { return pixels_ != nullptr; }
 
     void beginFrame();
     void endFrame();
@@ -66,7 +68,7 @@ private:
     int screenHeight_ = 0;
     int zDepthBufferLength_ = 0;
     std::vector<float> zDepthBuffer_;
-    std::vector<uint16_t> pixels_;
+    uint16_t* pixels_ = nullptr;
     hal::Display& display_;
 
     bool clipEnabled_ = false;

@@ -1,9 +1,16 @@
 #include "zyngine/graphics/renderer.hpp"
 
+#include "zyngine/hal/log.hpp"
+
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
 #include <cstring>
+#include <new>
+
+#if defined(ZYN_PLATFORM_ESPIDF)
+#include "esp_heap_caps.h"
+#endif
 
 namespace zyngine {
 namespace {
@@ -89,23 +96,59 @@ Renderer::Renderer(int screenWidth, int screenHeight, hal::Display& display)
       screenHeight_(screenHeight),
       display_(display) {
     zDepthBufferLength_ = screenWidth_ * screenHeight_;
-    zDepthBuffer_.assign(static_cast<size_t>(zDepthBufferLength_), -FLT_MAX);
-    pixels_.assign(static_cast<size_t>(zDepthBufferLength_), 0);
+    // ponytail: lazy z-buffer — 2D UI never touches it; saves ~W*H*4 bytes (critical on ESP32)
+    const size_t n = static_cast<size_t>(zDepthBufferLength_);
+    const size_t bytes = n * sizeof(uint16_t);
+#if defined(ZYN_PLATFORM_ESPIDF)
+    // Claim the largest DRAM region first so Clay can land in the other heap slab.
+    pixels_ = static_cast<uint16_t*>(
+        heap_caps_malloc(bytes, MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+    if (!pixels_) {
+        hal::Log::error("Renderer", "FB alloc failed (%u bytes, free=%u largest=%u)",
+                        static_cast<unsigned>(bytes),
+                        static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_8BIT)),
+                        static_cast<unsigned>(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT)));
+        return;
+    }
+#else
+    pixels_ = new (std::nothrow) uint16_t[n];
+    if (!pixels_) {
+        hal::Log::error("Renderer", "FB alloc failed (%u bytes)", static_cast<unsigned>(bytes));
+        return;
+    }
+#endif
+    std::memset(pixels_, 0, bytes);
 }
 
-Renderer::~Renderer() = default;
+Renderer::~Renderer() {
+    if (!pixels_) {
+        return;
+    }
+#if defined(ZYN_PLATFORM_ESPIDF)
+    heap_caps_free(pixels_);
+#else
+    delete[] pixels_;
+#endif
+    pixels_ = nullptr;
+}
 
 void Renderer::beginFrame() {
     // no-op for software path; reserved for future double-buffering hooks
 }
 
 void Renderer::endFrame() {
-    display_.present(pixels_.data(), screenWidth_, screenHeight_);
+    if (!pixels_) {
+        return;
+    }
+    display_.present(pixels_, screenWidth_, screenHeight_);
 }
 
 void Renderer::setZBuffer(int x, int y, float f) {
     if (x < 0 || y < 0 || x >= screenWidth_ || y >= screenHeight_) {
         return;
+    }
+    if (zDepthBuffer_.empty()) {
+        zDepthBuffer_.assign(static_cast<size_t>(zDepthBufferLength_), -FLT_MAX);
     }
     zDepthBuffer_[static_cast<size_t>(x + y * screenWidth_)] = f;
 }
@@ -113,6 +156,9 @@ void Renderer::setZBuffer(int x, int y, float f) {
 float Renderer::getZBuffer(int x, int y) const {
     if (x < 0 || y < 0 || x >= screenWidth_ || y >= screenHeight_) {
         return FLT_MAX;
+    }
+    if (zDepthBuffer_.empty()) {
+        return -FLT_MAX;
     }
     return zDepthBuffer_[static_cast<size_t>(x + y * screenWidth_)];
 }
@@ -255,8 +301,11 @@ void Renderer::renderSphere(ZVec3 pos, uint16_t color) {
 }
 
 void Renderer::clear(uint16_t color) {
+    if (!pixels_) {
+        return;
+    }
     std::fill(zDepthBuffer_.begin(), zDepthBuffer_.end(), -FLT_MAX);
-    std::fill(pixels_.begin(), pixels_.end(), color);
+    std::fill(pixels_, pixels_ + zDepthBufferLength_, color);
 }
 
 void Renderer::printText(int x, int y, const char* text, uint16_t /*backgroundColor*/, uint16_t textColor) {
@@ -269,7 +318,7 @@ void Renderer::printText(int x, int y, const char* text, int size, uint16_t /*ba
 }
 
 void Renderer::drawPixel(int x, int y, uint16_t color) {
-    if (!inBounds(x, y) || !inClip(x, y)) {
+    if (!pixels_ || !inBounds(x, y) || !inClip(x, y)) {
         return;
     }
     pixels_[static_cast<size_t>(x + y * screenWidth_)] = color;
@@ -306,10 +355,29 @@ void Renderer::drawRect(int x, int y, int width, int height, uint16_t color) {
 }
 
 void Renderer::fillRect(int x, int y, int width, int height, uint16_t color) {
-    for (int yy = y; yy < y + height; ++yy) {
-        for (int xx = x; xx < x + width; ++xx) {
-            drawPixel(xx, yy, color);
-        }
+    if (!pixels_ || width <= 0 || height <= 0) {
+        return;
+    }
+    int x0 = x;
+    int y0 = y;
+    int x1 = x + width;
+    int y1 = y + height;
+    if (x0 < 0) x0 = 0;
+    if (y0 < 0) y0 = 0;
+    if (x1 > screenWidth_) x1 = screenWidth_;
+    if (y1 > screenHeight_) y1 = screenHeight_;
+    if (clipEnabled_) {
+        if (x0 < clipX_) x0 = clipX_;
+        if (y0 < clipY_) y0 = clipY_;
+        if (x1 > clipX_ + clipW_) x1 = clipX_ + clipW_;
+        if (y1 > clipY_ + clipH_) y1 = clipY_ + clipH_;
+    }
+    if (x0 >= x1 || y0 >= y1) {
+        return;
+    }
+    for (int yy = y0; yy < y1; ++yy) {
+        uint16_t* row = pixels_ + yy * screenWidth_ + x0;
+        std::fill(row, row + (x1 - x0), color);
     }
 }
 

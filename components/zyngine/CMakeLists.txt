@@ -29,10 +29,14 @@ idf_component_register(
         "${ZYN_ROOT}/third_party/clay"
     REQUIRES
         driver
+        esp_lcd
         esp_timer
         freertos
-        LovyanGFX
+        esp_lcd_ili9341
+        nvs_flash
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_20)
 target_compile_definitions(${COMPONENT_LIB} PUBLIC ZYN_PLATFORM_ESPIDF=1)
+# Clay uses designated/partial aggregate inits; IDF turns -Wmissing-field-initializers into errors.
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-missing-field-initializers)

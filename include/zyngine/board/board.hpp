@@ -21,9 +21,17 @@ struct PinMap {
     int touchXm = -1;
     int touchYm = -1;
     int touchXp = -1;
+    int touchCs = -1;  // XPT2046 SPI CS (-1 if unused)
     int backlight = -1;
 
-    // Parallel ILI9486 bus
+    // SPI LCD bus (ILI9341 etc.)
+    int lcdSck = -1;
+    int lcdMiso = -1;
+    int lcdMosi = -1;
+    int lcdDc = -1;
+    int lcdRst = -1;
+
+    // Parallel ILI9486 bus (legacy board)
     int lcdWr = -1;
     int lcdRd = -1;
     int lcdRs = -1;
@@ -41,7 +49,9 @@ struct PinMap {
 struct DisplayConfig {
     int width = 320;
     int height = 480;
-    int rotation = 2;
+    int rotation = 2;   // odd => swap_xy (landscape)
+    bool mirrorX = false;
+    bool mirrorY = false;
 };
 
 struct BoardConfig {
