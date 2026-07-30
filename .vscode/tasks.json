@@ -2,9 +2,18 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "CMake: build",
+            "label": "CMake: configure desktop (Debug)",
             "type": "shell",
-            "command": "cmake --build build -j",
+            "command": "cmake -B build -DZYN_PLATFORM=desktop -DZYN_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Debug",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: build (Debug)",
+            "type": "shell",
+            "command": "cmake -B build -DZYN_PLATFORM=desktop -DZYN_BUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Debug && cmake --build build -j --target desktop_smoke",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -15,9 +24,9 @@
             "problemMatcher": []
         },
         {
-            "label": "CMake: configure desktop",
+            "label": "CMake: build",
             "type": "shell",
-            "command": "cmake -B build -DZYN_PLATFORM=desktop -DZYN_BUILD_EXAMPLES=ON",
+            "command": "cmake --build build -j",
             "options": {
                 "cwd": "${workspaceFolder}"
             },

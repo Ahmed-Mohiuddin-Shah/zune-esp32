@@ -1,14 +1,38 @@
 {
+    // Desktop debug examples (CodeLLDB). Duplicate a config and change
+    // "name" / "program" when you add more desktop targets.
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug desktop_smoke",
+            "name": "desktop: desktop_smoke",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/build/desktop_smoke",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "CMake: build"
+            "env": {
+                // "DISPLAY": ":0"
+            },
+            "preLaunchTask": "CMake: build (Debug)",
+            "stopOnEntry": false
+        },
+        {
+            // Attach to an already-running desktop binary (pick PID in UI).
+            "name": "desktop: attach",
+            "type": "lldb",
+            "request": "attach",
+            "program": "${workspaceFolder}/build/desktop_smoke",
+            "pid": "${command:pickProcess}"
         }
+        // Copy/paste template for a future example:
+        // {
+        //     "name": "desktop: my_app",
+        //     "type": "lldb",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/build/my_app",
+        //     "args": [],
+        //     "cwd": "${workspaceFolder}",
+        //     "preLaunchTask": "CMake: build (Debug)"
+        // }
     ]
 }
