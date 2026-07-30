@@ -42,6 +42,9 @@ public:
             hal::Log::info("Smoke", "no touch cal — starting wizard");
             hal::TouchCalib::run(*renderer_, *display_);
         }
+        if (display_) {
+            display_->setBrightness(brightness_);
+        }
         hal::Log::info("Smoke", "touch=pointer, no encoder");
     }
 
@@ -208,6 +211,9 @@ private:
             brightness_ = (brightness_ + 25) % 125;
             if (brightness_ == 0) {
                 brightness_ = 25;
+            }
+            if (display_) {
+                display_->setBrightness(brightness_);
             }
             char buf[32];
             std::snprintf(buf, sizeof(buf), "Bright %d%%", brightness_);

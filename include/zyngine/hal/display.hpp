@@ -31,6 +31,9 @@ public:
 
     virtual void setBacklight(bool on) { (void)on; }
 
+    /// Backlight level 0–100. Default no-op; ESP uses PWM.
+    virtual void setBrightness(int percent) { (void)percent; }
+
     /// Return true while the window/session should keep running.
     virtual bool shouldContinue() const { return true; }
 

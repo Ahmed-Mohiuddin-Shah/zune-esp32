@@ -29,6 +29,7 @@ idf_component_register(
         "${ZYN_ROOT}/third_party/clay"
     REQUIRES
         driver
+        esp_driver_ledc
         esp_lcd
         esp_timer
         freertos

@@ -9,6 +9,7 @@
 #include "esp32_ili9341_32/board.hpp"
 
 #include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "driver/spi_master.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
@@ -39,6 +40,11 @@ constexpr uint8_t kXptCmdX = 0xD0;
 constexpr uint8_t kXptCmdY = 0x90;
 constexpr uint8_t kXptCmdZ1 = 0xB0;
 constexpr int kTouchPressureMin = 40;  // edges of resistive panels read soft
+
+constexpr ledc_mode_t kBlMode = LEDC_LOW_SPEED_MODE;
+constexpr ledc_timer_t kBlTimer = LEDC_TIMER_0;
+constexpr ledc_channel_t kBlChan = LEDC_CHANNEL_0;
+constexpr int kBlDutyMax = 255;  // 8-bit
 
 bool onColorTransDone(esp_lcd_panel_io_handle_t, esp_lcd_panel_io_event_data_t*, void* ctx) {
     xSemaphoreGive(static_cast<SemaphoreHandle_t>(ctx));
@@ -135,8 +141,23 @@ public:
         ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_, true));
 
         if (board.pins.backlight >= 0) {
-            Gpio::setMode(board.pins.backlight, PinMode::Output);
-            Gpio::write(board.pins.backlight, PinLevel::High);
+            // ponytail: fixed LEDC ch0 — fine until something else needs PWM
+            ledc_timer_config_t blTimer = {};
+            blTimer.speed_mode = kBlMode;
+            blTimer.duty_resolution = LEDC_TIMER_8_BIT;
+            blTimer.timer_num = kBlTimer;
+            blTimer.freq_hz = 5000;
+            blTimer.clk_cfg = LEDC_AUTO_CLK;
+            ledc_timer_config(&blTimer);
+            ledc_channel_config_t blChan = {};
+            blChan.gpio_num = board.pins.backlight;
+            blChan.speed_mode = kBlMode;
+            blChan.channel = kBlChan;
+            blChan.timer_sel = kBlTimer;
+            blChan.duty = kBlDutyMax;
+            blChan.hpoint = 0;
+            ledc_channel_config(&blChan);
+            blPwm_ = true;
         }
 
         if (board.pins.touchCs >= 0) {
@@ -216,11 +237,21 @@ public:
         firstPresent_ = false;
     }
 
-    void setBacklight(bool on) override {
-        const auto board = zyngine::board::esp32Ili9341_32Board();
-        if (board.pins.backlight >= 0) {
-            Gpio::write(board.pins.backlight, on ? PinLevel::High : PinLevel::Low);
+    void setBacklight(bool on) override { setBrightness(on ? 100 : 0); }
+
+    void setBrightness(int percent) override {
+        if (!blPwm_) {
+            return;
         }
+        if (percent < 0) {
+            percent = 0;
+        }
+        if (percent > 100) {
+            percent = 100;
+        }
+        const uint32_t duty = (static_cast<uint32_t>(percent) * kBlDutyMax) / 100u;
+        ledc_set_duty(kBlMode, kBlChan, duty);
+        ledc_update_duty(kBlMode, kBlChan);
     }
 
     bool shouldContinue() const override { return true; }
@@ -294,6 +325,7 @@ private:
     uint16_t* lineBuf_ = nullptr;
     std::vector<uint32_t> rowHash_;
     bool firstPresent_ = true;
+    bool blPwm_ = false;
     TouchCalData touchCal_{};
 };
 
